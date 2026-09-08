@@ -109,6 +109,8 @@ def _fake_mujoco_backend(pre_step_control_fn=None, post_step_forward_sensor=Fals
     backend._np_dtype = np.float32
     backend._physics_state = np.zeros((1, 1), dtype=np.float32)
     backend._sensor_data = np.zeros((1, 1), dtype=np.float32)
+    backend._sensor_history_data = {}
+    backend._sensor_history_required_depth = 0
     backend._pending_xfrc_applied = np.zeros((1, 0), dtype=np.float64)
     backend._post_step_forward_sensor = post_step_forward_sensor
     backend._chunk_size = None

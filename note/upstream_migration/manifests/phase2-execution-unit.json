@@ -1,0 +1,73 @@
+{
+  "schema_version": "one-shot-execution/v1",
+  "unit_id": "OSE-UNILAB-UPSTREAM-PHASE2-20260907",
+  "closure_mode": "analysis",
+  "terminal_outcome": "complete the donor capability inventory and three-repository target ownership map",
+  "admission": "COMPLETE",
+  "scope": {
+    "requested": [
+      "establish the Phase 2 local capability inventory and UniLab uni_rl unisim ownership map"
+    ],
+    "preserved": [
+      "walk-only AMP semantics and historical distillation lifecycle constraints"
+    ],
+    "forbidden": [
+      "production source edits live simulation training commit push merge or main update"
+    ]
+  },
+  "identities": {
+    "design": "AMP-WALK-METHOD-v003 and AMP-WALK-TRAIN-v004 at donor 205cbf5",
+    "checkout": "UniLab@d9afc9656e63c82a64263f5a4dbd938ba1652af2; unilab_rl@ce0050ecc77ec17de84b6b581148c67e1ae03caa; unisim@f69e7b2025a301e6e0ce57021d6baaa232741e1e",
+    "entrypoint": "src/unilab/scripts/train_appo.py with uni_rl runtime_resolver",
+    "effective_config": "target has no g1_amp_walk config; mapping only",
+    "checkpoint": "cold-start migration plan; legacy checkpoint compatibility unresolved"
+  },
+  "authority": {
+    "local_reversible": {
+      "status": "approved",
+      "scope": "local read-only inspection and Phase 2 governance artifact writes"
+    },
+    "git_actions": {
+      "status": "not-requested",
+      "scope": "no commit push merge branch creation or main update"
+    },
+    "external_operations": {
+      "status": "not-requested",
+      "scope": "no remote repository mutation"
+    },
+    "bounded_live": {
+      "status": "not-requested",
+      "scope": "no simulator or spawned runtime probe"
+    },
+    "long_run": {
+      "status": "not-requested",
+      "scope": "no training"
+    },
+    "destructive": {
+      "status": "not-requested",
+      "scope": "no deletion or history rewrite"
+    }
+  },
+  "causal_closure": {
+    "required": true,
+    "status": "LOCALIZED",
+    "rationale": "source inspection located each migrated capability at its current package owner",
+    "owner_or_invariant": "unisim owns backend history; UniLab owns task/env/config; uni_rl owns learner/collector/IPC/checkpoint",
+    "evidence_ref": "../2026-09-07-phase2-capability-owner-map.md",
+    "falsifier": "a current public target API or repository boundary test assigns one of these capabilities to a different owner"
+  },
+  "dependencies": [],
+  "next_action": {
+    "class": "none",
+    "reversible": true,
+    "costly": false,
+    "externally_visible": false,
+    "destroys_evidence": false,
+    "decision_boundary": {
+      "kind": "none"
+    }
+  },
+  "offline_gaps": [],
+  "live_only_unknowns": [],
+  "attempts": []
+}

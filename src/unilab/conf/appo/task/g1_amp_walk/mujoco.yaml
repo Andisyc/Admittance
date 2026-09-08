@@ -1,0 +1,35 @@
+# @package _global_
+defaults:
+  - /task/g1_amp_walk/base
+  - _self_
+
+training:
+  task_name: G1AMPWalk
+  sim_backend: mujoco
+
+algo:
+  runtime_impl: amp_appo
+  runtime_resolver: unilab.scripts.amp_appo:resolve_amp_appo_runtime
+  runtime_context_resolver: unilab.scripts.amp_appo:resolve_amp_runtime_context
+  playback_policy_obs_mode: actor
+  algo_log_name: amp_appo
+  num_envs: 2048
+  steps_per_env: 24
+  max_iterations: 2000
+  save_interval: 50
+  load_run: "-1"
+  amp:
+    expert_manifest: amp_mjlab
+    observation_key: amp
+    observation_dim: 195
+    hidden_dims: [1024, 512, 256]
+    reward_coef: 0.1
+    task_reward_lerp: 0.75
+    replay_capacity: 32768
+    discriminator_batch_size: 4096
+    discriminator_updates: 1
+    discriminator_learning_rate: 1.0e-3
+    gradient_penalty: 10.0
+    normalizer_epsilon: 1.0e-5
+    normalizer_clip: 5.0
+    seed: 1

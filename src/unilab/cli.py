@@ -31,7 +31,7 @@ OFFPOLICY_ALGOS = {"sac", "td3", "flashsac"}
 # Built-in algos whose entrypoint script does not follow the train_<algo>.py
 # naming convention.
 SPECIAL_SCRIPT_NAMES = {"ppo": "train_rsl_rl.py", "appo": "train_appo.py"}
-INTERACTIVE_PLAY_ALGOS = {"ppo", "appo", "sac", "td3", "flashsac"}
+INTERACTIVE_PLAY_ALGOS = {"ppo", "appo", "sac", "td3", "flashsac", "distill"}
 # Physics backends whose interactive eval runs through the dedicated MuJoCo
 # viewer script: the selected backend owns the rollout while MuJoCo renders.
 MUJOCO_VIEWER_PHYSICS_SIMS = frozenset({"mujoco", "mjwarp"})

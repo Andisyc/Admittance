@@ -322,6 +322,10 @@ def _critic_obs(env: _TestEnv) -> np.ndarray:
     return env.episode_length_buf[:, None].astype(np.float32)
 
 
+def _amp_obs(env: _TestEnv) -> np.ndarray:
+    return np.full((env.num_envs, 3), 3.0, dtype=np.float32)
+
+
 def _episode_step_observation(env: ManagerBasedRlEnv) -> np.ndarray:
     return env.episode_length_buf[:, None].astype(np.float32)
 
@@ -1411,6 +1415,40 @@ def test_state_feedback_action_error_propagates_from_callback(
 def test_observation_mapping_fails_closed(mutate, error, match: str) -> None:
     cfg = _make_cfg()
     mutate(cfg)
+    with pytest.raises(error, match=match):
+        _make_env(cfg)
+
+
+def test_additional_observation_group_is_public_and_dimensioned() -> None:
+    cfg = _make_cfg()
+    cfg.observations["amp_style"] = ObservationGroupCfg(
+        terms={"amp": ObservationTermCfg(func=_amp_obs)}
+    )
+    cfg.additional_observation_groups = {"amp": "amp_style"}
+    env, _ = _make_env(cfg)
+    try:
+        state = env.init_state()
+        assert env.obs_groups_spec == {"obs": 2, "critic": 1, "amp": 3}
+        assert set(state.obs) == {"obs", "critic", "amp"}
+        np.testing.assert_array_equal(state.obs["amp"], np.full((2, 3), 3.0))
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize(
+    ("mapping", "error", "match"),
+    [
+        ({"obs": "amp_style"}, ValueError, "reserved output name 'obs'"),
+        ({"amp": "missing"}, KeyError, "requests group 'missing'"),
+        ({"": "amp_style"}, ValueError, "non-empty strings"),
+    ],
+)
+def test_additional_observation_mapping_fails_closed(mapping, error, match: str) -> None:
+    cfg = _make_cfg()
+    cfg.observations["amp_style"] = ObservationGroupCfg(
+        terms={"amp": ObservationTermCfg(func=_amp_obs)}
+    )
+    cfg.additional_observation_groups = mapping
     with pytest.raises(error, match=match):
         _make_env(cfg)
 

@@ -104,6 +104,7 @@ uv run scripts/generate_support_matrix.py --write
 | APPO (torch) | `g1_23dof_motion_tracking` (g1 23dof motion tracking) | Tested | - | Tested | - | - | - | - |
 | APPO (torch) | `g1_23dof_walk_flat` (g1 23dof walk flat) | Tested | - | Registered | - | - | - | - |
 | APPO (torch) | `g1_23dof_wall_flip_tracking` (g1 23dof wall flip tracking) | Tested | - | Tested | - | - | - | - |
+| APPO (torch) | `g1_amp_walk` (g1 amp walk) | Tested | - | - | - | - | - | - |
 | APPO (torch) | `g1_climb_tracking` (g1 climb tracking) | Tested | - | Tested | - | - | - | - |
 | SAC (torch) | `g1_walk_flat` (G1 walk flat) | Tested | Tested | Tested | Tested | Tested | Configured | Tested |
 | SAC (torch) | `g1_walk_rough` (G1 walk rough) | Tested | - | Tested | - | - | - | - |

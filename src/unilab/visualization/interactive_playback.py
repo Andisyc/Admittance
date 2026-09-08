@@ -316,6 +316,23 @@ class OffPolicyPlaybackSession:
         self.step_count = 0
         return self.obs
 
+    def refresh_observation(self) -> np.ndarray:
+        """Reload the current environment observation without stepping physics."""
+
+        state = getattr(self.env, "state", None)
+        obs_out = getattr(state, "obs", None)
+        if not isinstance(obs_out, dict):
+            raise RuntimeError(
+                "Off-policy playback observation refresh requires env.state.obs as a dict."
+            )
+        info_out = getattr(state, "info", None)
+        self.obs = np.asarray(self.obs_extractor(obs_out), dtype=np.float32)
+        self.current_priv_info = self._resolve_priv_info(
+            obs_out,
+            info_out if isinstance(info_out, dict) else None,
+        )
+        return self.obs
+
     def step_once(self) -> np.ndarray:
         actions = self._build_actions()
         state = self.env.step(actions)
@@ -372,7 +389,10 @@ class OffPolicyPlaybackSession:
                 obs_torch = obs_torch.float()
             if self.normalizer is not None:
                 obs_torch = self.normalizer(obs_torch, update=False)
-            if self.actor_algo_type == "hora_sac":
+            if self.actor_algo_type == "distill":
+                with torch.inference_mode():
+                    actions = self.actor(obs_torch)
+            elif self.actor_algo_type == "hora_sac":
                 if self.current_priv_info is None:
                     raise ValueError("HORA-SAC interactive play step is missing privileged info.")
                 priv_info_torch = torch.from_numpy(self.current_priv_info).to(self.device)
@@ -804,12 +824,26 @@ def create_appo_playback_session(
                 is_hora=is_hora,
             )
             checkpoint = torch.load(checkpoint_path, map_location=device_name, weights_only=True)
+            if rl_cfg.get("runtime_impl") == "amp_appo":
+                from uni_rl.algos.amp.checkpoint import extract_amp_actor_state
+
+                from unilab.scripts.amp_appo import build_amp_playback_identity
+
+                actor_state = extract_amp_actor_state(
+                    checkpoint,
+                    expected_playback_identity=build_amp_playback_identity(
+                        rl_cfg, action_dim=action_dim
+                    ),
+                    expected_actor_state=actor.state_dict(),
+                )
+            else:
+                actor_state = checkpoint["actor"]
             with policy_load_dim_guard(
                 env_obs_dim=actor_obs_dim,
                 env_action_dim=action_dim,
                 algo_name="appo",
             ):
-                actor.load_state_dict(checkpoint["actor"])
+                actor.load_state_dict(actor_state)
             policy = actor
             log(f"Loading APPO checkpoint: {checkpoint_path}")
 
@@ -1134,6 +1168,87 @@ def create_sac_playback_session(
     )
 
 
+def create_distill_playback_session(
+    playback_cfg: RslRlPlaybackConfig,
+    cfg: Any,
+    env_factory: Callable[[int], Any],
+    root_dir: str | Path,
+    device: str | None,
+    log: LogFn = print,
+) -> tuple[OffPolicyPlaybackSession, str, str | None]:
+    """Create interactive playback for a single-scenario distillation student."""
+    from unilab.scripts.g1_distill import load_g1_distill_student
+
+    device_name = default_device(torch, str(device) if device is not None else None)
+    env = env_factory(int(playback_cfg.num_envs))
+    if env is None:
+        raise RuntimeError("Playback env factory did not return an env.")
+
+    obs_dim, _critic_obs_dim = resolve_play_obs_dims(env.obs_groups_spec)
+    action_shape = getattr(env.action_space, "shape", None)
+    if action_shape is None:
+        raise ValueError("env.action_space.shape must be defined")
+    action_dim = int(action_shape[0])
+
+    student_spec_raw = OmegaConf.to_container(cfg.student, resolve=True)
+    if not isinstance(student_spec_raw, dict):
+        raise TypeError("distill student config must resolve to a mapping")
+    student_spec = cast(dict[str, Any], student_spec_raw)
+    expected_obs_dim = int(student_spec["obs_dim"])
+    expected_action_dim = int(student_spec["action_dim"])
+    if obs_dim != expected_obs_dim or action_dim != expected_action_dim:
+        raise ValueError(
+            "G1 distill playback owner contract mismatch: "
+            f"env_obs={obs_dim}, student_obs={expected_obs_dim}, "
+            f"env_action={action_dim}, student_action={expected_action_dim}"
+        )
+
+    policy: Any | None = None
+    checkpoint_path: str | None = None
+    if playback_cfg.action_mode == "policy":
+        configured = OmegaConf.select(cfg, "student.initial_checkpoint_path")
+        if configured in (None, ""):
+            raise FileNotFoundError(
+                "distill policy playback requires student.initial_checkpoint_path"
+            )
+        path = Path(str(configured)).expanduser()
+        if not path.is_absolute():
+            path = Path(root_dir) / path
+        path = path.resolve()
+        if not path.is_file():
+            raise FileNotFoundError(f"distill student checkpoint does not exist: {path}")
+        with policy_load_dim_guard(
+            env_obs_dim=obs_dim,
+            env_action_dim=action_dim,
+            algo_name="distill",
+        ):
+            policy = load_g1_distill_student(
+                path,
+                student_spec=student_spec,
+                device=device_name,
+            )
+        policy.eval()
+        checkpoint_path = str(path)
+        log(f"Loading distill student checkpoint: {checkpoint_path}")
+
+    log(f"Action mode: {playback_cfg.action_mode}")
+    return (
+        OffPolicyPlaybackSession(
+            env=env,
+            device=device_name,
+            action_mode=playback_cfg.action_mode,
+            actor=policy,
+            actor_algo_type="distill",
+            normalizer=None,
+            num_envs=playback_cfg.num_envs,
+            obs_extractor=extract_play_obs,
+            priv_info_resolver=lambda **_kwargs: None,
+        ),
+        "actor",
+        checkpoint_path,
+    )
+
+
 def _default_hora_distill_playback_deps(root_dir: str | Path) -> dict[str, Any]:
     from uni_rl.algos.hora.distill import (
         build_student_actor_and_normalizer,
@@ -1356,6 +1471,7 @@ __all__ = [
     "build_play_backend_adapter",
     "build_playback_config",
     "create_appo_playback_session",
+    "create_distill_playback_session",
     "create_hora_distill_playback_session",
     "create_rsl_rl_playback_session",
     "create_sac_playback_session",

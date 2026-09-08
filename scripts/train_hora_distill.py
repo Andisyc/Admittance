@@ -120,6 +120,14 @@ def _play_camera_kwargs(cfg: DictConfig) -> dict[str, Any]:
     return camera_kwargs
 
 
+def _train_and_close_env(*, env: Any, trainer: Any) -> None:
+    """Run one distillation trainer while retaining env lifecycle ownership."""
+    try:
+        trainer.train()
+    finally:
+        env.close()
+
+
 def play_hora_distill(cfg: DictConfig, device: str) -> str | None:
     task_log_root = get_log_root(ROOT_DIR, cfg) / str(cfg.training.task_name)
     load_path, load_path_dir = resolve_hora_stage2_checkpoint_path(cfg, root_dir=ROOT_DIR)
@@ -251,7 +259,7 @@ def main(cfg: DictConfig) -> None:
         distill_runtime_cfg=_resolved_distill_runtime_cfg(cfg),
         logger=logger,
     )
-    trainer.train()
+    _train_and_close_env(env=env, trainer=trainer)
 
 
 if __name__ == "__main__":

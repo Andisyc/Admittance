@@ -16,10 +16,12 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from unilab.visualization.interactive_playback import (
     KeyboardCommander,
+    OffPolicyPlaybackSession,
     PlaybackControls,
     RslRlPlaybackConfig,
     RslRlPlaybackSession,
     create_appo_playback_session,
+    create_distill_playback_session,
     create_hora_distill_playback_session,
     create_rsl_rl_playback_session,
     create_sac_playback_session,
@@ -27,6 +29,77 @@ from unilab.visualization.interactive_playback import (
 )
 
 _VEL_LIMIT = [[-0.6, -0.4, -0.8], [1.0, 0.4, 0.8]]
+
+
+def test_create_distill_playback_session_loads_and_steps_student(tmp_path: Path) -> None:
+    from omegaconf import OmegaConf
+    from uni_rl.algos.distill.checkpoint import save_distillation_checkpoint
+
+    from unilab.scripts.g1_distill import build_g1_distill_student
+
+    student_spec = {
+        "model_type": "mlp",
+        "obs_dim": 3,
+        "action_dim": 2,
+        "hidden_dims": [8],
+        "activation": "elu",
+        "squash_action": True,
+    }
+    checkpoint = tmp_path / "student_0001.pt"
+    student = build_g1_distill_student(student_spec, device="cpu")
+    save_distillation_checkpoint(checkpoint, student=student, agent_steps=1)
+
+    class Env:
+        def __init__(self, num_envs: int) -> None:
+            self.num_envs = num_envs
+            self.obs_groups_spec = {"obs": 3}
+            self.action_space = SimpleNamespace(
+                shape=(2,),
+                low=np.full((2,), -1.0, dtype=np.float32),
+                high=np.full((2,), 1.0, dtype=np.float32),
+            )
+            self.state = None
+            self.last_actions: np.ndarray | None = None
+
+        def init_state(self) -> None:
+            self.state = SimpleNamespace(
+                obs={"obs": np.ones((self.num_envs, 3), dtype=np.float32)},
+                info={},
+            )
+
+        def reset(self, _env_indices: np.ndarray):
+            if self.state is None:
+                self.init_state()
+            return self.state.obs, self.state.info
+
+        def step(self, actions: np.ndarray):
+            self.last_actions = actions
+            return self.state
+
+        def close(self) -> None:
+            pass
+
+    env = Env(num_envs=2)
+    cfg = OmegaConf.create(
+        {"student": {**student_spec, "initial_checkpoint_path": str(checkpoint)}}
+    )
+    session, policy_obs_mode, resolved = create_distill_playback_session(
+        playback_cfg=SimpleNamespace(num_envs=2, action_mode="policy"),
+        cfg=cfg,
+        env_factory=lambda _num_envs: env,
+        root_dir=tmp_path,
+        device="cpu",
+        log=lambda _message: None,
+    )
+
+    session.reset()
+    session.step_once()
+
+    assert policy_obs_mode == "actor"
+    assert resolved == str(checkpoint.resolve())
+    assert env.last_actions is not None
+    assert env.last_actions.shape == (2, 2)
+    assert np.isfinite(env.last_actions).all()
 
 
 class _FakeWrappedEnv:
@@ -97,6 +170,48 @@ def test_playback_session_advance_respects_pause_and_single_step() -> None:
     assert wrapped.step_calls == 1
     assert torch.equal(wrapped.last_actions, torch.zeros((1, 2)))
     assert session.advance(controls) is False
+
+
+def test_offpolicy_playback_refreshes_command_observation_without_stepping() -> None:
+    command = np.zeros((1, 3), dtype=np.float32)
+    state = SimpleNamespace(
+        obs={"obs": command.copy()},
+        info={"commands": command},
+    )
+
+    class Env:
+        def __init__(self) -> None:
+            self.state = state
+            self.step_calls = 0
+
+        def refresh_state(self) -> None:
+            self.state.obs["obs"] = self.state.info["commands"].copy()
+
+        def step(self, actions):
+            self.step_calls += 1
+            return self.state
+
+    env = Env()
+    session = OffPolicyPlaybackSession(
+        env=env,
+        device="cpu",
+        action_mode="zero",
+        actor=None,
+        actor_algo_type="sac",
+        normalizer=None,
+        num_envs=1,
+        obs_extractor=lambda obs: obs["obs"],
+        priv_info_resolver=lambda **_kwargs: None,
+    )
+    session.obs = np.zeros((1, 3), dtype=np.float32)
+
+    from unilab.scripts.play_interactive import _apply_playback_command
+
+    _apply_playback_command(session, env, np.asarray([0.2, 0.0, 0.1], dtype=np.float32))
+
+    np.testing.assert_allclose(session.obs, [[0.2, 0.0, 0.1]])
+    assert env.step_calls == 0
+    assert session.step_count == 0
 
 
 def test_create_rsl_rl_playback_session_loads_checkpoint_and_runner_log_dir() -> None:
@@ -760,6 +875,116 @@ def test_appo_hora_playback_session_uses_hora_wrapper_and_actor_checkpoint(
     torch.testing.assert_close(captured["loaded_actor"]["weight"], torch.tensor(1.0))
     assert isinstance(captured["policy_obs"], TensorDict)
     torch.testing.assert_close(captured["step_actions"], torch.ones((1, 2)))
+
+
+def test_appo_amp_playback_uses_identity_checked_actor_extractor(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import rsl_rl.utils as rsl_rl_utils
+    import uni_rl.algos.amp.checkpoint as amp_checkpoint
+    from omegaconf import OmegaConf
+    from tensordict import TensorDict
+
+    checkpoint = tmp_path / "model_10.pt"
+    torch.save({"schema": "fixture"}, checkpoint)
+    captured: dict[str, Any] = {}
+
+    class FakeWrapper:
+        def __init__(self, env, *, device, policy_obs_mode):
+            self.env = env
+            self.device = device
+            self.num_envs = env.num_envs
+
+        def get_observations(self):
+            return TensorDict({"policy": torch.zeros((1, 3))}, batch_size=1)
+
+        def reset(self):
+            return self.get_observations(), {}
+
+        def step(self, actions):
+            return self.get_observations(), torch.zeros(1), torch.zeros(1).bool(), {}
+
+    class FakeActor(torch.nn.Module):
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+
+        def load_state_dict(self, state_dict, strict=True):
+            captured["loaded_actor"] = state_dict
+            return None
+
+        def forward(self, obs):
+            return torch.zeros((1, 2), dtype=torch.float32)
+
+    fake_env = SimpleNamespace(
+        num_envs=1,
+        obs_groups_spec={"obs": 3, "critic": 5, "amp": 195},
+        action_space=SimpleNamespace(shape=(2,), low=np.full((2,), -1.0), high=np.full((2,), 1.0)),
+        get_physics_state_snapshot=lambda: np.zeros((1, 4), dtype=np.float32),
+        state=SimpleNamespace(info={}),
+    )
+    cfg = OmegaConf.create(
+        {
+            "training": {
+                "task_name": "G1AMPWalk",
+                "play_env_num": 1,
+                "log_root": None,
+                "sim2sim_strict": True,
+            },
+            "algo": {
+                "algo_log_name": "amp_appo",
+                "load_run": str(tmp_path),
+                "checkpoint": str(checkpoint),
+                "runtime_impl": "amp_appo",
+                "runtime_context": {
+                    "observation": {
+                        "policy_observation_mapping": {
+                            "obs": "policy",
+                            "critic": "critic",
+                            "amp": "amp_style",
+                        }
+                    }
+                },
+                "obs_groups": {"actor": {"policy": 0}},
+                "actor": {"class_name": "fake.Actor", "hidden_dims": [8]},
+                "critic": {"class_name": "fake.Actor", "hidden_dims": [8]},
+            },
+        }
+    )
+
+    monkeypatch.setattr(rsl_rl_utils, "resolve_callable", lambda path: FakeActor)
+
+    def extract(checkpoint_value, *, expected_playback_identity, expected_actor_state):
+        captured["checkpoint"] = checkpoint_value
+        captured["playback_identity"] = expected_playback_identity
+        captured["expected_actor_state"] = expected_actor_state
+        return {"weight": torch.tensor(1.0)}
+
+    monkeypatch.setattr(amp_checkpoint, "extract_amp_actor_state", extract)
+    session, _, resolved = create_appo_playback_session(
+        playback_cfg=RslRlPlaybackConfig(
+            task="G1AMPWalk",
+            load_run=str(tmp_path),
+            checkpoint=str(checkpoint),
+            action_mode="policy",
+            policy_obs_mode="actor",
+            algo_log_name="amp_appo",
+            log_root=None,
+        ),
+        cfg=cfg,
+        rl_cfg=OmegaConf.to_container(cfg.algo, resolve=True),
+        env_factory=lambda num_envs: fake_env,
+        root_dir=tmp_path,
+        device="cpu",
+        wrapper_cls=FakeWrapper,
+        log=lambda message: None,
+    )
+
+    assert resolved == str(checkpoint)
+    assert captured["loaded_actor"]["weight"].item() == 1.0
+    assert captured["playback_identity"]["action_dim"] == 2
+    assert captured["playback_identity"]["policy_observation_mapping"]["amp"] == "amp_style"
+    assert captured["expected_actor_state"] == {}
 
 
 def test_sac_hora_playback_session_updates_priv_info_after_reset_and_step(

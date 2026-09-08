@@ -1,0 +1,182 @@
+{
+  "schema_version": "code-review-expert/v1",
+  "review_id": "CRE-UNILAB-UPSTREAM-PHASE2-20260907",
+  "mode": "migration",
+  "profiles": [
+    "standard",
+    "module-boundary",
+    "repository-discipline",
+    "research-ml"
+  ],
+  "verdict": "MIGRATION_REVIEW_PASS",
+  "scope": {
+    "requested": [
+      "independently review the Phase 2 capability inventory and cross-repository owner map"
+    ],
+    "preserved": [
+      "walk-only AMP semantics, asynchronous APPO ownership, and deferred distillation scope"
+    ],
+    "forbidden": [
+      "production implementation, runtime claims, training claims, commits, pushes, merges, or main updates"
+    ]
+  },
+  "identities": {
+    "project": "unilabsim/UniLab with unilabsim/unilab_rl and unilabsim/unisim",
+    "design": "AMP-WALK-METHOD-v003 and AMP-WALK-TRAIN-v004 at donor 205cbf59765242344cbce6b1b838ffbc7afb2052",
+    "contract": "UNILAB-UPSTREAM-PHASE2-20260907 capability and owner map",
+    "checkout": "UniLab@d9afc9656e63c82a64263f5a4dbd938ba1652af2; unilab_rl@ce0050ecc77ec17de84b6b581148c67e1ae03caa; unisim@f69e7b2025a301e6e0ce57021d6baaa232741e1e",
+    "review_object": "note/upstream_migration/2026-09-07-phase2-capability-owner-map.md@sha256:171b98332ed7994bac5d3ec7bf8c2e2edf957115b3a4aebad9cf23a2e4f70500"
+  },
+  "authority": {
+    "review": {
+      "status": "read-only",
+      "scope": "inspect the bounded Phase 2 mapping and its evidence"
+    },
+    "source_edits": {
+      "status": "not-authorized",
+      "scope": "no production source edits are admitted by this review"
+    },
+    "report_write": {
+      "status": "approved",
+      "scope": "write the Phase 2 review receipt under note/upstream_migration/manifests",
+      "receipt": "user request dated 2026-09-07 to execute Phase 2 with code-review-expert"
+    }
+  },
+  "review_object": {
+    "kind": "mapping",
+    "path": "../2026-09-07-phase2-capability-owner-map.md",
+    "content_hash": "sha256:171b98332ed7994bac5d3ec7bf8c2e2edf957115b3a4aebad9cf23a2e4f70500",
+    "current": true
+  },
+  "repository_discipline": {
+    "status": "active",
+    "path": "../../../AGENTS.md",
+    "content_hash": "sha256:94e37c5d77cac8d72771199a851c63ab6e13f6336dcb0463ff768f5585cdc273",
+    "current": true
+  },
+  "dimensions": [
+    {
+      "name": "responsibility-ownership",
+      "disposition": "pass",
+      "evidence": "C1-C12 and U1-U6 assign backend history to unisim, task-specific terms/config to UniLab, generic env lifecycle to ManagerBasedRlEnv, and learner/IPC/checkpoint state to uni_rl."
+    },
+    {
+      "name": "public-interface",
+      "disposition": "pass",
+      "evidence": "The plan requires a public SimBackend history contract and explicitly forbids private MuJoCo access from the env layer."
+    },
+    {
+      "name": "dependency-direction",
+      "disposition": "pass",
+      "evidence": "The map preserves unisim backend APIs -> UniLab EnvProtocol/task composition -> uni_rl runtime injection without copying IPC into UniLab."
+    },
+    {
+      "name": "state-lifecycle",
+      "disposition": "pass",
+      "evidence": "Terminal next-state identity, four-sample history order, learner-only discriminator/replay/normalizer mutation, and checkpoint compatibility are explicit migration risks."
+    },
+    {
+      "name": "change-surface",
+      "disposition": "pass",
+      "evidence": "The work is split into owner-scoped U1-U4 units, with offline/runtime closure in U5 and distillation isolated in U6."
+    },
+    {
+      "name": "evidence-boundary",
+      "disposition": "pass",
+      "evidence": "The map limits its claim to ownership and scope and expressly excludes module, runtime, training, and policy-quality proof."
+    },
+    {
+      "name": "tensor-provenance",
+      "disposition": "pass",
+      "evidence": "The frozen inventory binds 195D state, 390D transition, N/T/feature axes, float32 representation, device transfer, terminal substitution, validity, and finite-value behavior."
+    },
+    {
+      "name": "gradient-update-boundary",
+      "disposition": "pass",
+      "evidence": "The inventory freezes D_k scoring before actor/critic update, detached discriminator reward scoring, and learner-only discriminator mutation before D_(k+1)."
+    },
+    {
+      "name": "persistence-evaluation",
+      "disposition": "pass",
+      "evidence": "Checkpoint schema and replay/normalizer/discriminator persistence are assigned to uni_rl, while legacy compatibility remains an explicit U4 decision and training quality remains out of scope."
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "CRE-F-PHASE2-001",
+      "severity": "P1",
+      "status": "resolved",
+      "location": "note/upstream_migration/2026-09-07-phase2-capability-owner-map.md:11",
+      "evidence": [
+        {
+          "kind": "source",
+          "locator": "unilab_rl@ce0050ecc77ec17de84b6b581148c67e1ae03caa and unisim@f69e7b2025a301e6e0ce57021d6baaa232741e1e",
+          "observation": "The revised map binds repository URLs, release commits, detached read-only checkouts, and installed-package source equivalence."
+        }
+      ],
+      "named_diagnostic": "Characterization Test",
+      "responsibility_at_risk": "external package source identity",
+      "preserved_behavior": "the inspected installed runtime remains the exact source baseline for planning",
+      "smallest_safe_change": "record immutable release commits and source-equivalence evidence",
+      "required_tests": [
+        "recursively compare installed package source with each tagged checkout excluding bytecode caches"
+      ],
+      "stop_condition": "any source difference or unresolved external repository identity"
+    },
+    {
+      "finding_id": "CRE-F-PHASE2-002",
+      "severity": "P1",
+      "status": "resolved",
+      "location": "note/upstream_migration/2026-09-07-phase2-capability-owner-map.md:63",
+      "evidence": [
+        {
+          "kind": "contract",
+          "locator": "AGENTS.md Env and Config/Reward boundaries",
+          "observation": "The revised C1, C5 and U2 separate generic lifecycle/manager execution from G1-specific terms, task config, registration and XML."
+        }
+      ],
+      "named_diagnostic": "Divergent Change",
+      "responsibility_at_risk": "UniLab env lifecycle versus task-specific locomotion semantics",
+      "preserved_behavior": "ManagerBasedRlEnv stays generic while the G1 task package owns G1 rules",
+      "smallest_safe_change": "state both owners and their public handoff explicitly",
+      "required_tests": [
+        "U0 affected-module registry and Test Cards must bind each term to its declared owner"
+      ],
+      "stop_condition": "G1-specific behavior is placed in the generic manager env or duplicated across owners"
+    },
+    {
+      "finding_id": "CRE-F-PHASE2-003",
+      "severity": "P2",
+      "status": "resolved",
+      "location": "note/upstream_migration/2026-09-07-phase2-capability-owner-map.md:93",
+      "evidence": [
+        {
+          "kind": "contract",
+          "locator": "Frozen AMP Parameter Inventory",
+          "observation": "The revised inventory defines dtype, axes, transfer owner, validity/masks, finite-value failure, gradient ownership and invalid-batch behavior."
+        }
+      ],
+      "named_diagnostic": "Research ML/RL boundary",
+      "responsibility_at_risk": "AMP rollout and learner tensor semantics",
+      "preserved_behavior": "collector-to-learner AMP transitions retain stable identity and D_k update ordering",
+      "smallest_safe_change": "freeze the missing tensor and gradient boundary rules in the migration inventory",
+      "required_tests": [
+        "U0 Test Cards must bind each inventory rule to exact producer and consumer assertions"
+      ],
+      "stop_condition": "an AMP row can be silently cast, sanitized, zero-filled, masked away, or updated by the wrong process"
+    }
+  ],
+  "residual_risks": [
+    "Construction remains blocked until U0 creates target-bound Test Cards, the affected-module registry, the mature-method alignment receipt, and construction branches for external owners."
+  ],
+  "blockers": [],
+  "claims": {
+    "maintainability": "reviewed",
+    "semantic_correctness": "not-claimed",
+    "module_correctness": "not-claimed",
+    "runtime_root_cause": "not-claimed",
+    "formal_route": "not-claimed",
+    "policy_quality": "not-claimed"
+  },
+  "dependencies": []
+}

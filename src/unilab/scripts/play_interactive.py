@@ -31,7 +31,7 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -73,6 +73,7 @@ from unilab.visualization.interactive_playback import (
     build_play_backend_adapter,
     build_playback_config,
     create_appo_playback_session,
+    create_distill_playback_session,
     create_hora_distill_playback_session,
     create_rsl_rl_playback_session,
     create_sac_playback_session,
@@ -132,13 +133,33 @@ def _algo_config_dict(cfg: DictConfig | None) -> dict[str, Any]:
     return algo_config_dict(cfg)
 
 
-SUPPORTED_INTERACTIVE_ALGOS = ("ppo", "appo", "sac", "td3", "flashsac", "hora_distill")
+def _prepare_appo_playback_rl_cfg(
+    cfg: DictConfig, env_cfg_override: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Apply the same owner runtime context used by non-interactive APPO play."""
+    from unilab.scripts.train_appo import apply_appo_runtime_context
+
+    rl_cfg = _algo_config_dict(cfg)
+    apply_appo_runtime_context(rl_cfg, cfg, env_cfg_override)
+    return rl_cfg
+
+
+SUPPORTED_INTERACTIVE_ALGOS = (
+    "ppo",
+    "appo",
+    "sac",
+    "td3",
+    "flashsac",
+    "distill",
+    "hora_distill",
+)
 _CONFIG_ROOT_BY_ALGO = {
     "ppo": "ppo",
     "appo": "appo",
     "sac": "sac",
     "td3": "td3",
     "flashsac": "flashsac",
+    "distill": "distill",
     "hora_distill": "hora_distill",
 }
 _OFFPOLICY_INTERACTIVE_ALGOS = {"sac", "td3", "flashsac"}
@@ -772,6 +793,37 @@ def _build_keyboard_commander(env: Any, args) -> KeyboardCommander | None:
     return commander
 
 
+def _apply_playback_command(playback_session: Any, env: Any, command: np.ndarray) -> None:
+    """Apply a legacy velocity command and refresh an off-policy policy input."""
+
+    state = getattr(env, "state", None)
+    info = getattr(state, "info", None)
+    commands = info.get("commands") if isinstance(info, dict) else None
+    if not isinstance(commands, np.ndarray) or commands.ndim != 2 or commands.shape[1] < 3:
+        raise RuntimeError(
+            "Playback command synchronization requires env.state.info['commands'] "
+            "with shape (num_envs, >=3)."
+        )
+    command_arr = np.asarray(command, dtype=commands.dtype)
+    if command_arr.shape == (3,):
+        command_arr = np.broadcast_to(command_arr, (commands.shape[0], 3))
+    elif command_arr.shape != (commands.shape[0], 3):
+        raise ValueError(
+            "Playback command synchronization expects command shape "
+            f"(3,) or ({commands.shape[0]}, 3), got {command_arr.shape}."
+        )
+    if np.array_equal(commands[:, :3], command_arr):
+        return
+
+    commands[:, :3] = command_arr
+    refresh_state = getattr(env, "refresh_state", None)
+    if callable(refresh_state):
+        refresh_state()
+    refresh_observation = getattr(playback_session, "refresh_observation", None)
+    if callable(refresh_observation):
+        refresh_observation()
+
+
 def _state_has_velocity_commands(env: Any) -> bool:
     state = getattr(env, "state", None)
     info = getattr(state, "info", None) if state is not None else None
@@ -921,36 +973,39 @@ def play_interactive(args, cfg: DictConfig | None = None, *, algo: str | None = 
         if bound_device is not None:
             device = bound_device
 
-    def _create_env(num_envs: int):
+    def _build_env_cfg_override() -> dict[str, Any] | None:
         if cfg is None:
             # Legacy programmatic callers do not carry a composed Hydra
             # config, but the selected playback device still has to reach
             # GPU-backed backend adapters (notably Isaac and Genesis).
-            legacy_env_cfg_override = apply_backend_env_device_override(
+            return apply_backend_env_device_override(
                 None,
                 sim_backend,
                 learner_device=device,
             )
-            return registry.make(
-                args.task,
-                num_envs=num_envs,
-                sim_backend=sim_backend,
-                env_cfg_override=legacy_env_cfg_override or None,
-            )
-        from unilab.base.config_adapter import create_env
-
-        env_cfg_override: dict[str, Any] | None
         if algo in _OFFPOLICY_INTERACTIVE_ALGOS:
             env_cfg_override = build_offpolicy_env_cfg_override(algo, cfg, root_dir=Path.cwd())
         else:
             env_cfg_override = build_play_backend_adapter(
                 cfg, root_dir=Path.cwd(), algo_name=algo
             ).build_task_env_cfg_override()
-        env_cfg_override = apply_backend_env_device_override(
+        return apply_backend_env_device_override(
             env_cfg_override,
             sim_backend,
             learner_device=device,
         )
+
+    def _create_env(num_envs: int):
+        env_cfg_override = _build_env_cfg_override()
+        if cfg is None:
+            return registry.make(
+                args.task,
+                num_envs=num_envs,
+                sim_backend=sim_backend,
+                env_cfg_override=env_cfg_override or None,
+            )
+        from unilab.base.config_adapter import create_env
+
         try:
             return create_env(
                 cfg,
@@ -999,10 +1054,13 @@ def play_interactive(args, cfg: DictConfig | None = None, *, algo: str | None = 
         elif algo == "appo":
             if cfg is None:
                 raise ValueError("APPO interactive playback requires a composed Hydra config.")
+            env_cfg_override = _build_env_cfg_override()
+            if env_cfg_override is None:
+                raise ValueError("APPO interactive playback requires an environment owner config.")
             session = create_appo_playback_session(
                 playback_cfg=playback_cfg,
                 cfg=cfg,
-                rl_cfg=_algo_config_dict(cfg),
+                rl_cfg=_prepare_appo_playback_rl_cfg(cfg, env_cfg_override),
                 env_factory=_create_env,
                 root_dir=Path.cwd(),
                 device=device,
@@ -1020,6 +1078,17 @@ def play_interactive(args, cfg: DictConfig | None = None, *, algo: str | None = 
                 device=device,
                 algo_name=algo,
                 log=lambda message: print(f"[play_interactive] {message}"),
+            )
+        elif algo == "distill":
+            if cfg is None:
+                raise ValueError("Distill interactive playback requires a composed Hydra config.")
+            session = create_distill_playback_session(
+                playback_cfg=playback_cfg,
+                cfg=cfg,
+                env_factory=_create_env,
+                root_dir=Path.cwd(),
+                device=device,
+                log=lambda msg: print(f"[play_interactive] {msg}"),
             )
         elif algo == "hora_distill":
             if cfg is None:
@@ -1176,7 +1245,7 @@ def play_interactive(args, cfg: DictConfig | None = None, *, algo: str | None = 
 
                 # Write the command before stepping so this step's obs follow it.
                 if commander is not None and env.state is not None:
-                    env.state.info["commands"][:] = commander.command
+                    _apply_playback_command(playback_session, env, commander.command)
 
                 playback_session.advance(controls)
 
@@ -1239,12 +1308,17 @@ def play_interactive(args, cfg: DictConfig | None = None, *, algo: str | None = 
 
 
 def _build_play_args(cfg: DictConfig, *, algo: str = "ppo") -> PlayInteractiveArgs:
+    policy_obs_mode = str(cfg.interactive.policy_obs_mode)
+    if policy_obs_mode == "auto":
+        policy_obs_mode = str(
+            OmegaConf.select(cfg, "algo.playback_policy_obs_mode", default=policy_obs_mode)
+        )
     return PlayInteractiveArgs(
         task=str(cfg.training.task_name),
         load_run=str(cfg.algo.load_run),
         checkpoint=normalize_checkpoint_value(OmegaConf.select(cfg, "algo.checkpoint")),
         action_mode=str(cfg.interactive.action_mode),
-        policy_obs_mode=str(cfg.interactive.policy_obs_mode),
+        policy_obs_mode=policy_obs_mode,
         algo_log_name=str(cfg.algo.algo_log_name),
         log_root=(
             str(cfg.training.log_root)

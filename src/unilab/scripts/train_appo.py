@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import datetime
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, cast
 
 import hydra
 import torch
 from omegaconf import DictConfig, OmegaConf
+from rsl_rl.utils import resolve_callable
 from uni_rl.algos.appo.runtime import resolve_appo_runtime
 from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper
 from unisim.backend.base import log_playback_plan
@@ -107,12 +108,41 @@ def build_appo_runner_kwargs(
     return runner_kwargs
 
 
+def merge_runtime_runner_kwargs(
+    runner_kwargs: dict[str, Any], runtime_kwargs: Any
+) -> dict[str, Any]:
+    """Merge custom runtime-owned constructor data without silent overrides."""
+    if not isinstance(runtime_kwargs, Mapping):
+        raise TypeError("APPO runtime runner_kwargs must be a mapping")
+    collisions = set(runner_kwargs) & set(runtime_kwargs)
+    if collisions:
+        raise ValueError(
+            f"APPO runtime runner_kwargs collide with generic runner keys: {sorted(collisions)}"
+        )
+    return {**runner_kwargs, **dict(runtime_kwargs)}
+
+
+def apply_appo_runtime_context(
+    rl_cfg: dict[str, Any], cfg: DictConfig, env_cfg_override: Mapping[str, Any]
+) -> None:
+    """Resolve an optional owner context before custom runtime construction."""
+    resolver_path = rl_cfg.get("runtime_context_resolver")
+    if resolver_path in (None, ""):
+        return
+    resolver = resolve_callable(str(resolver_path))
+    context = resolver(cfg, env_cfg_override)
+    if not isinstance(context, Mapping):
+        raise TypeError("APPO runtime_context_resolver must return a mapping")
+    rl_cfg["runtime_context"] = dict(context)
+
+
 def apply_appo_runtime_flags(
     rl_cfg: dict[str, Any],
     cfg: DictConfig,
     *,
     training_enabled: bool,
 ) -> None:
+    rl_cfg["runtime_mode"] = "train" if training_enabled else "play"
     algorithm_cfg = rl_cfg.setdefault("algorithm", {})
     if not isinstance(algorithm_cfg, dict):
         return
@@ -211,7 +241,7 @@ def play_appo(
             OmegaConf.select(cfg, "algo.checkpoint", default=None)
         ),
         action_mode="policy",
-        policy_obs_mode="flat",
+        policy_obs_mode=str(rl_cfg.get("playback_policy_obs_mode", "flat")),
         algo_log_name=str(cfg.algo.algo_log_name),
         log_root=None,
         num_envs=cfg.training.play_env_num,
@@ -311,8 +341,6 @@ def main(cfg: DictConfig) -> None:
     # Convert algo config to plain dict for APPORunner / RSL-RL internals
     rl_cfg = algo_config_dict(cfg)
     apply_appo_runtime_flags(rl_cfg, cfg, training_enabled=not cfg.training.play_only)
-    appo_runtime = resolve_appo_runtime(rl_cfg, default_play_fn=play_appo)
-
     if cfg.training.log_dir is None:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         log_root = _get_log_root(cfg)
@@ -363,6 +391,8 @@ def main(cfg: DictConfig) -> None:
             else learner_device
         ),
     )
+    apply_appo_runtime_context(rl_cfg, cfg, env_cfg_override)
+    appo_runtime = resolve_appo_runtime(rl_cfg, default_play_fn=play_appo)
     seed_info = apply_configured_training_seed(cfg, torch_runtime=True, cuda=True)
 
     tracker = None
@@ -383,13 +413,14 @@ def main(cfg: DictConfig) -> None:
 
     try:
         if not cfg.training.play_only:
+            generic_runner_kwargs = build_appo_runner_kwargs(
+                cfg,
+                env_cfg_override=env_cfg_override,
+                collector_device=collector_device,
+                rl_cfg=rl_cfg,
+            )
             runner = appo_runtime.runner_cls(
-                **build_appo_runner_kwargs(
-                    cfg,
-                    env_cfg_override=env_cfg_override,
-                    collector_device=collector_device,
-                    rl_cfg=rl_cfg,
-                )
+                **merge_runtime_runner_kwargs(generic_runner_kwargs, appo_runtime.runner_kwargs)
             )
 
             try:

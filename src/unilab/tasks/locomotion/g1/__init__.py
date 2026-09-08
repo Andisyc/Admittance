@@ -14,6 +14,12 @@ registry.register_env("G1WalkFlat", make_g1_walk_env, sim_backend="genesis")
 registry.register_env("G1WalkFlat", make_g1_walk_env, sim_backend="isaacsim")
 registry.register_env("G1WalkFlat", make_g1_walk_env, sim_backend="newton")
 
+registry.register_env_config("G1WalkHeight", ManagerBasedRlEnvCfg)
+registry.register_env("G1WalkHeight", make_g1_walk_env, sim_backend="mujoco")
+
+registry.register_env_config("G1AMPWalk", ManagerBasedRlEnvCfg)
+registry.register_env("G1AMPWalk", make_g1_walk_env, sim_backend="mujoco")
+
 registry.register_env_config("G1WalkRough", ManagerBasedRlEnvCfg)
 registry.register_env("G1WalkRough", make_g1_walk_env, sim_backend="mujoco")
 registry.register_env("G1WalkRough", make_g1_walk_env, sim_backend="motrix")

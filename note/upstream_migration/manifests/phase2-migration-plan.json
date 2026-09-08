@@ -1,0 +1,71 @@
+{
+  "schema_version": "migration-new-branch/v1",
+  "migration_id": "UNILAB-UPSTREAM-PHASE2-20260907",
+  "mode": "BRANCH_ISOLATED",
+  "donor": {
+    "kind": "branch",
+    "repository": "https://github.com/Andisyc/UniLab.git",
+    "revision": "205cbf59765242344cbce6b1b838ffbc7afb2052",
+    "symbols": [
+      "src/unilab/envs/locomotion/g1/amp_walk.py:G1AMPWalkEnv",
+      "src/unilab/algos/torch/amp:AMP APPO extension",
+      "src/unilab/base/backend:MuJoCo sensor history",
+      "src/unilab/algos/torch/distill:deferred DAgger lifecycle"
+    ],
+    "license_status": "compatible",
+    "license_evidence": "Apache-2.0 LICENSE in donor and target repositories"
+  },
+  "target": {
+    "repository": "https://github.com/unilabsim/UniLab.git; https://github.com/unilabsim/unilab_rl.git; https://github.com/unilabsim/unisim.git",
+    "base_revision": "UniLab@d9afc9656e63c82a64263f5a4dbd938ba1652af2; unilab_rl@ce0050ecc77ec17de84b6b581148c67e1ae03caa (v1.0.0); unisim@f69e7b2025a301e6e0ce57021d6baaa232741e1e (v1.1.3)",
+    "checkout": "UniLab dev/upstream-20260907-integration@d9afc9656e63c82a64263f5a4dbd938ba1652af2 with preserved untracked .codegraph and checkpoints; detached read-only source identity checkouts /private/tmp/unilab-phase2-unilab-rl-v1.0.0@ce0050ecc77ec17de84b6b581148c67e1ae03caa and /private/tmp/unilab-phase2-unisim-v1.1.3@f69e7b2025a301e6e0ce57021d6baaa232741e1e; installed package source recursively identical excluding caches",
+    "branch_or_worktree": "dev/upstream-20260907-integration"
+  },
+  "semantics": {
+    "owner": "capability-specific three-owner map in ../2026-09-07-phase2-capability-owner-map.md",
+    "included": [
+      "fixed-forward walk-only AMP task and observations",
+      "native four-sample sensor history and symmetric self-collision",
+      "AMP extension over the asynchronous uni_rl APPO runtime",
+      "ReGait expert transition provenance",
+      "checkpoint and actor-only playback integration"
+    ],
+    "excluded": [
+      "standing running fall recovery gait control and height control",
+      "synchronous PPO fallback or copied generic APPO IPC under UniLab",
+      "distillation and DAgger implementation in the initial AMP delivery"
+    ],
+    "preserved": [
+      "current upstream package and dependency boundaries",
+      "non-AMP APPO behavior and one native batched physics step",
+      "legacy fork recoverability through the backup branch"
+    ]
+  },
+  "activation": {
+    "kind": "branch",
+    "owner": "dev/upstream-20260907-integration"
+  },
+  "parameter_inventory": {
+    "path": "../2026-09-07-phase2-capability-owner-map.md#frozen-amp-parameter-inventory",
+    "complete": true,
+    "persistence_risk": "affected"
+  },
+  "authority": {
+    "git_actions": {
+      "status": "approved",
+      "scope": "write local Phase 2 analysis artifacts on the existing integration branch; no commit push merge or main update"
+    },
+    "semantic_change": {
+      "status": "not-requested",
+      "scope": "preserve the accepted walk-only AMP semantics"
+    },
+    "external_code": {
+      "status": "approved",
+      "scope": "analyze and plan compatible Apache-2.0 code migration across the UniLab project repositories"
+    }
+  },
+  "state_compatibility": {
+    "affected": true,
+    "mixed_version_policy": "forbidden"
+  }
+}

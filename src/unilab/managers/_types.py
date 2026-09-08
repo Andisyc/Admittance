@@ -17,6 +17,9 @@ class ManagerEntity(Protocol):
     """Cold-path entity metadata required by :class:`SceneEntityCfg`."""
 
     @property
+    def data(self) -> Any: ...
+
+    @property
     def joint_names(self) -> Sequence[str]: ...
 
     @property
@@ -153,6 +156,18 @@ class ManagerSensorView(Protocol):
     def read(self) -> np.ndarray: ...
 
 
+class ManagerSensorHistoryView(Protocol):
+    """Backend-owned fixed-depth sensor history retained by a manager term."""
+
+    @property
+    def names(self) -> tuple[str, ...]: ...
+
+    @property
+    def history_length(self) -> int: ...
+
+    def read(self) -> np.ndarray: ...
+
+
 class ManagerScene(Protocol):
     """Minimal name-addressable scene surface consumed by managers."""
 
@@ -165,6 +180,10 @@ class ManagerScene(Protocol):
     def __getitem__(self, name: str) -> ManagerEntity: ...
 
     def bind_sensor_data(self, names: Sequence[str]) -> ManagerSensorView: ...
+
+    def bind_sensor_history(
+        self, names: Sequence[str], *, history_length: int
+    ) -> ManagerSensorHistoryView: ...
 
     def reset_to_default(self, env_ids: np.ndarray, *, term_name: str) -> None: ...
 

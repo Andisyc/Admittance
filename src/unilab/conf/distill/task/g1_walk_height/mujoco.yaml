@@ -1,0 +1,22 @@
+# @package _global_
+# Distillation binds to the existing SAC task owner. Environment, command,
+# observation, reward, and backend semantics stay in conf/sac.
+training:
+  task_name: G1WalkHeight
+  sim_backend: mujoco
+
+teacher:
+  algo_family: sac
+  algo_type: sac
+  algo_log_name: fast_sac
+  task: sac/g1_walk_height/mujoco
+  task_name: G1WalkHeight
+  obs_dim: 99
+  action_dim: 29
+  actor_hidden_dim: 512
+  use_layer_norm: true
+  obs_normalization: true
+
+student:
+  obs_dim: 99
+  action_dim: 29

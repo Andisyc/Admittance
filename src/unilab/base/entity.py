@@ -22,6 +22,8 @@ from unisim.dr.types import IntervalRandomizationPlan
 from unilab.utils.rotation import np_quat_apply, np_quat_apply_inverse, np_yaw_from_quat
 
 if TYPE_CHECKING:
+    from unisim.backend.base import BackendSensorHistoryView
+
     from unilab.base.reset_state import ResetStateTransaction
     from unilab.base.scene import SceneCfg
 
@@ -2323,6 +2325,18 @@ class EntityScene(Mapping[str, Entity]):
         except (KeyError, TypeError, ValueError, NotImplementedError) as exc:
             raise type(exc)(
                 "Manager scene named-sensor capability on backend "
+                f"'{self._backend.backend_type}': {exc}"
+            ) from exc
+
+    def bind_sensor_history(
+        self, names: Sequence[str], *, history_length: int
+    ) -> BackendSensorHistoryView:
+        """Bind validated oldest-to-newest backend sensor history on the cold path."""
+        try:
+            return self._backend.bind_sensor_history(names, history_length=history_length)
+        except (KeyError, TypeError, ValueError, NotImplementedError) as exc:
+            raise type(exc)(
+                "Manager scene named-sensor-history capability on backend "
                 f"'{self._backend.backend_type}': {exc}"
             ) from exc
 

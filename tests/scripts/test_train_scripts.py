@@ -195,6 +195,16 @@ def test_appo_runner_kwargs_forward_algorithm_seed():
     assert kwargs["seed"] == 37
 
 
+def test_appo_runtime_kwargs_merge_is_collision_checked() -> None:
+    mod = _train_appo()
+    assert mod.merge_runtime_runner_kwargs({"env_name": "Task"}, {"expert": "owned"}) == {
+        "env_name": "Task",
+        "expert": "owned",
+    }
+    with pytest.raises(ValueError, match="collide.*env_name"):
+        mod.merge_runtime_runner_kwargs({"env_name": "Task"}, {"env_name": "Other"})
+
+
 def test_appo_runner_kwargs_default_load_run_does_not_resume(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -410,6 +420,30 @@ def test_hora_distill_runtime_checkpoint_records_model_only():
     runtime = OmegaConf.to_container(mod._resolved_distill_runtime_cfg(cfg), resolve=True)
 
     assert runtime == {"algo": {"model": {"hidden_dims": [512, 256, 128]}}}
+
+
+@pytest.mark.parametrize("raises", [False, True])
+def test_hora_distill_training_always_closes_env(raises: bool) -> None:
+    mod = _train_hora_distill()
+    events: list[str] = []
+
+    class FakeEnv:
+        def close(self) -> None:
+            events.append("close")
+
+    class FakeTrainer:
+        def train(self) -> None:
+            events.append("train")
+            if raises:
+                raise RuntimeError("training failed")
+
+    if raises:
+        with pytest.raises(RuntimeError, match="training failed"):
+            mod._train_and_close_env(env=FakeEnv(), trainer=FakeTrainer())
+    else:
+        mod._train_and_close_env(env=FakeEnv(), trainer=FakeTrainer())
+
+    assert events == ["train", "close"]
 
 
 def test_hora_distill_checkpoint_runtime_only_restores_model_structure():
@@ -3264,6 +3298,21 @@ def test_play_interactive_dynamic_compose_supports_algo_roots():
     assert distill_cfg.interactive.action_mode == "policy"
 
 
+def test_amp_interactive_uses_actor_observation_and_validated_runtime_context():
+    mod = _play_interactive()
+    cfg = mod._compose_interactive_config("appo", ["task=g1_amp_walk/mujoco"])
+    args = mod._build_play_args(cfg, algo="appo")
+    env_cfg_override = mod.build_play_backend_adapter(
+        cfg, root_dir=_SRC_DIR.parent, algo_name="appo"
+    ).build_task_env_cfg_override()
+
+    rl_cfg = mod._prepare_appo_playback_rl_cfg(cfg, env_cfg_override)
+
+    assert args.policy_obs_mode == "actor"
+    assert rl_cfg["runtime_context"]["task"]["command"] == [1.0, 0.0, 0.0]
+    assert rl_cfg["runtime_context"]["observation"]["amp_dim"] == 195
+
+
 def test_play_interactive_sac_overrides_pass_through():
     mod = _play_interactive()
 
@@ -3657,7 +3706,7 @@ def test_play_appo_uses_shared_playback_session_factory(
             return "obs_1"
 
     fake_session = FakeSession()
-    rl_cfg: dict[str, Any] = {"seed": 1}
+    rl_cfg: dict[str, Any] = {"seed": 1, "playback_policy_obs_mode": "actor"}
 
     def fake_create_session(**kwargs: Any):
         captured["factory_kwargs"] = kwargs
@@ -3680,6 +3729,7 @@ def test_play_appo_uses_shared_playback_session_factory(
     playback_cfg = factory_kwargs["playback_cfg"]
     assert playback_cfg.task == cfg.training.task_name
     assert playback_cfg.action_mode == "policy"
+    assert playback_cfg.policy_obs_mode == "actor"
     assert playback_cfg.algo_log_name == cfg.algo.algo_log_name
     assert playback_cfg.num_envs == cfg.training.play_env_num
     assert factory_kwargs["cfg"] is cfg

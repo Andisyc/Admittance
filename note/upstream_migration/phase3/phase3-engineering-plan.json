@@ -1,0 +1,462 @@
+{
+  "schema_version": "engineering-plan/v1",
+  "plan_id": "UNILAB-AMP-PHASE3-PLAN-v001",
+  "revision": 2,
+  "status": "USER_CONFIRMED",
+  "identities": {
+    "project": "unilabsim/UniLab@d9afc9656e63c82a64263f5a4dbd938ba1652af2 + unilabsim/unisim@f69e7b2025a301e6e0ce57021d6baaa232741e1e + unilabsim/unilab_rl@ce0050ecc77ec17de84b6b581148c67e1ae03caa + PyPI mujoco-uni-runtime 0.5.0 sdist sha256:a0c774da3607b6111d7c91155867377f9eb6d91ab6e0bbb97f15247df1ead9d7",
+    "design": "Andisyc/UniLab@205cbf59765242344cbce6b1b838ffbc7afb2052:AMP-WALK-METHOD-v003",
+    "contract": "Andisyc/UniLab@205cbf59765242344cbce6b1b838ffbc7afb2052:AMP-WALK-TRAIN-v004 + phase2 owner map sha256:171b98332ed7994bac5d3ec7bf8c2e2edf957115b3a4aebad9cf23a2e4f70500",
+    "checkout": "/Users/chengyuxuan/ArtiIntComVis/UniLab branch dev/upstream-20260907-integration at d9afc9656e63c82a64263f5a4dbd938ba1652af2; companion source snapshots under /private/tmp at their bound commits; runtime publisher checkout is a B0 construction entry condition"
+  },
+  "scope": {
+    "requested": [
+      "fixed-forward walk-only G1 AMP training on the split high-speed asynchronous APPO architecture",
+      "native four-substep self-collision history, 195D AMP state, true-terminal transition and learner-only AMP state",
+      "fresh training, new-schema resume, atomic checkpoint and actor-only playback"
+    ],
+    "preserved": [
+      "generic APPO, HORA, G1 walk, EnvFactory and existing CLI/playback behavior",
+      "single BatchEnvPool.step call with native nstep=4 and no-history fast path",
+      "spawn ownership, final-observation identity and deterministic cleanup"
+    ],
+    "forbidden": [
+      "standing, running, fall recovery, gait phase/control, height control, right-hand shaping, motion reset or distillation",
+      "synchronous fallback, Python nstep=1 loop, backend-private access or reverse uni_rl imports",
+      "legacy model_1850/model_2000 resume or playback and partial/mixed checkpoint restore"
+    ]
+  },
+  "authority": {
+    "source_read": "authorized for the three bound repositories, donor commit and planning evidence",
+    "plan_write": "authorized under note/upstream_migration/phase3 only",
+    "production_write": "not-authorized-during-planning",
+    "git_actions": "not authorized: no branch creation, commit, push, merge or remote issue/ADR mutation"
+  },
+  "plan_document": {
+    "path": "2026-09-07-phase3-amp-async-engineering-plan.md",
+    "content_hash": "sha256:f74a65f16d42acc471d6359c2cb72b6b7f3a0d6d4b489a5e0185ca008f746c27",
+    "current": true
+  },
+  "current_flow": [
+    {
+      "order": 1,
+      "symbol": "unilab.cli.build_route/build_command -> unilab.scripts.train_appo.main",
+      "responsibility": "compose the existing APPO route and owner configuration",
+      "consumes": ["CLI task/backend/overrides"],
+      "produces": ["Hydra config and training invocation"]
+    },
+    {
+      "order": 2,
+      "symbol": "uni_rl.algos.appo.runtime.resolve_appo_runtime",
+      "responsibility": "resolve default or registered runner while retaining the default play function",
+      "consumes": ["algo runtime resolver marker"],
+      "produces": ["runner class and play function"]
+    },
+    {
+      "order": 3,
+      "symbol": "unilab.scripts.train_appo.build_appo_runner_kwargs",
+      "responsibility": "construct a pickleable registry EnvFactory and package-neutral runner inputs",
+      "consumes": ["Hydra config", "task registry", "backend adapter"],
+      "produces": ["runner kwargs"]
+    },
+    {
+      "order": 4,
+      "symbol": "uni_rl.algos.appo.runner.APPORunner.learn",
+      "responsibility": "own learner, shared memory, spawn collectors, weight versions, checkpoints and cleanup",
+      "consumes": ["EnvFactory", "RL config", "devices"],
+      "produces": ["rollout/update lifecycle", "checkpoint"]
+    },
+    {
+      "order": 5,
+      "symbol": "uni_rl.algos.appo.worker.appo_collector_fn",
+      "responsibility": "own an environment/current observation and publish complete rollouts",
+      "consumes": ["NpEnvState.obs", "final_observation", "shared weights"],
+      "produces": ["RolloutRingBuffer slot"]
+    },
+    {
+      "order": 6,
+      "symbol": "unilab.base.np_env.NpEnv.step -> ManagerBasedRlEnv._update_state_in_read_phase",
+      "responsibility": "step backend, compute reward and map public observation groups",
+      "consumes": ["actions", "backend state", "manager terms"],
+      "produces": ["reward", "dict observation", "termination"]
+    },
+    {
+      "order": 7,
+      "symbol": "unilab.base.np_env.NpEnv._reset_done_envs",
+      "responsibility": "capture every pre-reset public observation group then replace reset rows",
+      "consumes": ["terminated state.obs"],
+      "produces": ["final_observation", "autoreset carry"]
+    },
+    {
+      "order": 8,
+      "symbol": "unisim.backend.mujoco.MuJoCoBackend.step/set_state",
+      "responsibility": "perform one native batched step and selected-row resets, then refresh final arrays",
+      "consumes": ["control", "nsteps", "selected reset state"],
+      "produces": ["final physics state", "final sensor data"]
+    },
+    {
+      "order": 9,
+      "symbol": "mujoco_uni.native.BatchEnvPool.step",
+      "responsibility": "advance all native substeps but in 0.5.0 export only final FULLPHYSICS state and optional final sensordata",
+      "consumes": ["initial state", "control", "nstep"],
+      "produces": ["final native state", "optional final sensor data"]
+    }
+  ],
+  "changes": [
+    {
+      "change_id": "P3-C00",
+      "owner": "mujoco-uni-runtime native batched transport",
+      "file": "mujoco_uni/runtime/batch.py + mujoco_uni/native/batch_env.cc; mujoco_uni/batch_env.py remains a compatibility re-export",
+      "symbols": ["runtime.batch.BatchEnvPool.step", "_unsafe_step", "_unsafe_step_threaded", "_unsafe_step_callback_round", "_unsafe_step_callback_round_threaded", "BatchEnvPool::step", "BatchEnvPool::StepWithControlCallback", "pybind step declaration"],
+      "callers": ["unisim MuJoCoBackend direct step", "unisim pre-step-control path"],
+      "consumers": ["unisim raw history decoder"],
+      "state_reads": ["MjData sensor history immediately after each stepped round", "mjSTATE_HISTORY size", "per-environment callback history carry"],
+      "state_writes": ["optional raw history output array", "native callback history carry shaped nbatch by nhistory"],
+      "current_behavior": "0.5.0 exports final FULLPHYSICS state and optional final sensordata only",
+      "planned_behavior": "public Python step validates and forwards optional return_history; native direct mode returns a third raw mjSTATE_HISTORY array after one call, while callback mode restores/captures a per-env history carry every round before optional forward sensor refresh",
+      "preserved_behavior": ["default signature semantics and return shapes", "single native dispatch", "physics trajectory", "thread/chunk behavior"],
+      "forbidden_dependencies": ["Python substep callback", "multiple step calls", "unisim or UniLab imports"],
+      "tests": [
+        {"path": "mujoco-uni-runtime/tests/test_batch_env.py", "case": "public Python signature/doc/forwarding plus default API/return snapshot and invalid/insufficient-nstep combinations", "expected": "return_history false is unchanged and invalid combinations fail before stepping"},
+        {"path": "mujoco-uni-runtime/tests/test_batch_env.py", "case": "raw history against direct mj_getState oracle for nsample=4 contact sensor", "expected": "one native call returns exact raw history for every env"},
+        {"path": "mujoco-uni-runtime/tests/test_batch_env.py", "case": "direct/callback, nbatch greater than nthread, thread and chunk variants", "expected": "per-env carry prevents cross-row history and final state agrees without extra dispatch"}
+      ],
+      "stop_condition": "publisher source cannot be identity-bound, default API/physics changes or history requires multiple Python/native step calls"
+    },
+    {
+      "change_id": "P3-C01",
+      "owner": "unisim public backend contract",
+      "file": "unisim/src/unisim/backend/base.py",
+      "symbols": ["SensorHistoryReadFn", "BackendSensorHistoryView", "SimBackend.bind_sensor_history", "SimBackend._bind_sensor_history_reader"],
+      "callers": ["UniLab EntityScene cold-path binding", "backend-neutral contract tests"],
+      "consumers": ["G1 SelfCollisionPenalty", "MuJoCo adapter"],
+      "state_reads": ["sensor names", "history length", "adapter read callback"],
+      "state_writes": [],
+      "current_behavior": "only final-step BackendSensorView is public",
+      "planned_behavior": "add a fail-closed immutable history view with metadata and read validation",
+      "preserved_behavior": ["existing final-sensor APIs", "unsupported adapters need no implementation"],
+      "forbidden_dependencies": ["UniLab", "uni_rl", "MuJoCo private implementation in the base contract"],
+      "tests": [
+        {"path": "unisim/tests/test_contract.py", "case": "metadata, shape, dtype and finiteness validation", "expected": "invalid history reads fail with contract context"},
+        {"path": "unisim/tests/test_contract.py", "case": "unsupported adapter and invalid depth", "expected": "fail closed without altering final-sensor behavior"}
+      ],
+      "stop_condition": "the view cannot remain backend-neutral or default adapters no longer preserve behavior"
+    },
+    {
+      "change_id": "P3-C02",
+      "owner": "unisim MuJoCo adapter",
+      "file": "unisim/src/unisim/backend/mujoco/backend.py + unisim/pyproject.toml + unisim/uv.lock",
+      "symbols": ["_bind_sensor_history_reader", "_refresh_sensor_history", "_reset_sensor_history_rows"],
+      "callers": ["MuJoCoBackend.step", "_step_with_pre_step_control", "set_state", "interval root-velocity reset"],
+      "consumers": ["BackendSensorHistoryView"],
+      "state_reads": ["B0 raw mjSTATE_HISTORY output", "public sensor_history metadata", "sensor indices", "selected reset rows"],
+      "state_writes": ["lazy sensor-history arrays", "stable history-view cache"],
+      "current_behavior": "one native step returns final physics and final sensor arrays",
+      "planned_behavior": "request B0 return_history once, decode named oldest-to-newest history, initialize reset rows and reject nsteps smaller than bound depth",
+      "preserved_behavior": ["single native call", "final sensor meaning", "no-history fast path", "unselected reset rows"],
+      "forbidden_dependencies": ["Python nstep=1 loop", "extra native step", "runtime-private patch in UniLab", "pre-reset history leakage"],
+      "tests": [
+        {"path": "unisim/tests/test_mujoco.py", "case": "history ordering and native dispatch spy", "expected": "four oldest-to-newest samples from exactly one nstep=4 call"},
+        {"path": "unisim/tests/test_mujoco.py", "case": "set_state and interval partial reset", "expected": "only selected rows are reinitialized"},
+        {"path": "unisim/tests/test_mujoco.py", "case": "history disabled ON/OFF differential", "expected": "physics and final sensor outputs are elementwise identical"}
+      ],
+      "stop_condition": "B0 artifact is unavailable, dispatch count changes, ON/OFF state drifts, nsteps is too short or reset rows bleed"
+    },
+    {
+      "change_id": "P3-C03",
+      "owner": "UniLab generic manager-based environment output contract",
+      "file": "src/unilab/envs/manager_based_rl_env.py",
+      "symbols": ["ManagerBasedRlEnvCfg.additional_observation_groups", "ManagerBasedRlEnv._build_observation_output_mapping", "_validate_observation_mapping", "_map_observations"],
+      "callers": ["ManagerBasedRlEnv initialization", "reset read phase", "step read phase"],
+      "consumers": ["NpEnvState.obs", "obs_groups_spec", "NpEnv._reset_done_envs", "uni_rl collector"],
+      "state_reads": ["ObservationManager groups and dimensions"],
+      "state_writes": ["cached public-output mapping"],
+      "current_behavior": "public mapping is obs plus optional critic",
+      "planned_behavior": "support explicitly configured extra public groups such as amp",
+      "preserved_behavior": ["default mapping", "generic terminal capture", "non-AMP task dimensions"],
+      "forbidden_dependencies": ["G1-specific names in generic env", "uni_rl import", "backend-private access"],
+      "tests": [
+        {"path": "tests/envs/test_manager_based_rl_env.py", "case": "default and AMP output mappings", "expected": "default snapshot unchanged and AMP maps exactly once"},
+        {"path": "tests/base/test_np_env.py", "case": "terminal and autoreset AMP row identity", "expected": "pre-reset amp is captured and reset amp becomes carry"}
+      ],
+      "stop_condition": "any non-AMP task changes its public obs/critic surface"
+    },
+    {
+      "change_id": "P3-C04",
+      "owner": "UniLab G1 task semantics",
+      "file": "src/unilab/tasks/locomotion/g1/amp_terms.py + src/unilab/base/entity.py + src/unilab/assets/robots/g1/amp_walk_task.xml",
+      "symbols": ["G1AmpObservation", "compute_g1_amp_observation", "SelfCollisionPenalty", "EntityScene.bind_sensor_history"],
+      "callers": ["ObservationManager", "RewardManager", "G1 AMP task construction"],
+      "consumers": ["public amp observation group", "task reward", "terminal transition"],
+      "state_reads": ["13 selected body poses/velocities", "four-sample public sensor history"],
+      "state_writes": [],
+      "current_behavior": "G1 walk has no AMP group or task-local symmetric collision term",
+      "planned_behavior": "produce canonical 195D AMP state and symmetric history-based collision penalty through public owners",
+      "preserved_behavior": ["robot.xml", "generic entity behavior", "other task fragments"],
+      "forbidden_dependencies": ["backend-private methods", "right-hand-only term", "pose/gait-phase authority"],
+      "tests": [
+        {"path": "tests/envs/locomotion/g1/test_g1_amp_owner_contract.py", "case": "independent 195D pose/quaternion oracle and body ordering", "expected": "exact finite float32 representation"},
+        {"path": "tests/envs/locomotion/g1/test_g1_amp_owner_contract.py", "case": "collision threshold, symmetry and sample ordering", "expected": "strict >10N four-sample cost at scale -0.1"}
+      ],
+      "stop_condition": "195D identity differs, public history is unavailable or an asymmetric/pose term is required"
+    },
+    {
+      "change_id": "P3-C05",
+      "owner": "UniLab G1 AMP expert-data provenance",
+      "file": "src/unilab/tasks/locomotion/g1/amp_motion.py + src/unilab/assets/motions/g1/amp_walk/manifest.json; blobs at matching unilabsim/unilab-motions paths",
+      "symbols": ["ResolvedG1AmpMotionManifest", "resolve_g1_amp_motion_manifest", "load_g1_amp_expert_transitions"],
+      "callers": ["UniLab AMP runner-kwargs preparation"],
+      "consumers": ["uni_rl AMPAPPORunner"],
+      "state_reads": ["asset hub paths", "manifest", "motion arrays"],
+      "state_writes": ["immutable package-neutral expert arrays and provenance value"],
+      "current_behavior": "asset hub resolves files but has no AMP manifest contract",
+      "planned_behavior": "validate hashes/schema/FPS/body order and build adjacent no-wrap float32 transitions once on the cold path",
+      "preserved_behavior": ["generic MotionLoader", "asset hub download/cache behavior", "no runtime asset parsing"],
+      "forbidden_dependencies": ["learner state", "step/reset parsing", "unverified generator rationale"],
+      "tests": [
+        {"path": "tests/assets/test_amp_motion_manifest.py", "case": "known manifest and adjacent transition oracle", "expected": "only within-clip t to t+1 pairs are returned"},
+        {"path": "tests/assets/test_amp_motion_manifest.py", "case": "each provenance and finiteness mismatch", "expected": "failure occurs before runner allocation"}
+      ],
+      "stop_condition": "hosted blob identity is unavailable or package-neutral arrays cannot preserve adjacency/provenance"
+    },
+    {
+      "change_id": "P3-C06",
+      "owner": "UniLab G1 registry and Hydra task owner",
+      "file": "src/unilab/tasks/locomotion/g1/__init__.py + src/unilab/conf/appo/task/g1_amp_walk/base.yaml + mujoco.yaml",
+      "symbols": ["G1AMPWalk registry entry", "g1_amp_walk base composition", "g1_amp_walk MuJoCo composition"],
+      "callers": ["ensure_registries", "Hydra composition", "registry_env_factory"],
+      "consumers": ["spawn collectors", "sim2sim snapshot", "runtime resolver"],
+      "state_reads": ["frozen task terms and backend owner config"],
+      "state_writes": ["new registry entry and immutable composed config"],
+      "current_behavior": "only gait/pose-based G1 walk task configs exist",
+      "planned_behavior": "add a separate fixed-forward walk-only AMP task with no gait-phase or pose authority",
+      "preserved_behavior": ["G1WalkFlat registrations/configs", "generic CLI route", "factory picklability"],
+      "forbidden_dependencies": ["task-name branch in factory/CLI", "standing/running/recovery/distillation config"],
+      "tests": [
+        {"path": "tests/envs/locomotion/g1/test_g1_amp_owner_contract.py", "case": "frozen config and forbidden-term snapshot", "expected": "only fixed-forward AMP scope is composed"},
+        {"path": "tests/scripts/test_train_scripts.py", "case": "registry/Hydra spawn composition", "expected": "generic route constructs G1AMPWalk without special branch"}
+      ],
+      "stop_condition": "the task inherits gait phase/default pose or needs a generic CLI/factory branch"
+    },
+    {
+      "change_id": "P3-C07",
+      "owner": "uni_rl rollout and IPC contract",
+      "file": "uni_rl/src/uni_rl/algos/appo/rollout.py + src/uni_rl/ipc/rollout_ring_buffer.py + src/uni_rl/algos/appo/staging.py",
+      "symbols": ["PairedObservationFieldSpec", "resolve_paired_observation_fields", "RolloutRingBuffer.__init__", "estimate_appo_bytes"],
+      "callers": ["APPORunner shared-memory setup", "appo_collector_fn", "RolloutStagingPool"],
+      "consumers": ["AMPAPPOLearner"],
+      "state_reads": ["public observation-group specs", "extra field dimensions"],
+      "state_writes": ["amp_state and amp_next_state shared arrays"],
+      "current_behavior": "rollout shared fields are fixed float32 keys",
+      "planned_behavior": "allow validated extra paired observation fields while preserving default layout",
+      "preserved_behavior": ["core field names/shapes", "ring pointers/versions", "default memory estimate"],
+      "forbidden_dependencies": ["UniLab", "unisim", "dynamic object payloads", "silent field collision"],
+      "tests": [
+        {"path": "uni_rl/tests/ipc/test_rollout_ring_buffer.py", "case": "AMP owner/attach shapes and invalid specs", "expected": "exact float32 arrays or fail before attach"},
+        {"path": "uni_rl/tests/algos/test_appo_staging.py", "case": "AMP transpose and slot reuse", "expected": "N,T fields become T,K*N without version drift"}
+      ],
+      "stop_condition": "default keys/layout/pointers change or AMP fields cannot remain fixed float32"
+    },
+    {
+      "change_id": "P3-C08",
+      "owner": "uni_rl generic APPORunner and collector extension seam",
+      "file": "uni_rl/src/uni_rl/algos/appo/runner.py + src/uni_rl/algos/appo/worker.py",
+      "symbols": ["_on_env_probe", "_rollout_observation_specs", "_learner_class", "_learner_extra_kwargs", "_restore_learner_checkpoint", "_save_checkpoint", "appo_collector_fn paired-field path"],
+      "callers": ["APPORunner.__init__", "APPORunner.learn", "spawn collector"],
+      "consumers": ["AMPAPPORunner", "RolloutRingBuffer", "APPOLearner"],
+      "state_reads": ["current obs", "terminal final obs", "paired specs"],
+      "state_writes": ["validated complete rollout slot", "error channel state"],
+      "current_behavior": "generic runner and worker have no AMP extension fields/hooks",
+      "planned_behavior": "add no-op generic hooks and validate true-terminal paired payload before publication with child finally cleanup",
+      "preserved_behavior": ["default APPO", "HORA independent path", "parent lifecycle and weight publication"],
+      "forbidden_dependencies": ["AMP branch in generic loop", "UniLab/unisim import", "publication before validation"],
+      "tests": [
+        {"path": "uni_rl/tests/algos/test_appo_worker.py", "case": "normal, terminal/autoreset and malformed AMP payload", "expected": "correct true-next data or no slot/version publication"},
+        {"path": "uni_rl/tests/algos/test_appo_runner_unit.py", "case": "default hooks and collector failure cleanup", "expected": "generic behavior unchanged and resources close deterministically"}
+      ],
+      "stop_condition": "generic APPO/HORA changes, invalid data publishes or a child resource leaks"
+    },
+    {
+      "change_id": "P3-C09",
+      "owner": "uni_rl AMP async runner and learner extension",
+      "file": "uni_rl/src/uni_rl/algos/amp/runner.py + data.py + learner.py",
+      "symbols": ["AMPAPPORunner", "AMPExpertTransitions", "AMPDiscriminator", "AMPRunningNormalizer", "AMPReplayBuffer", "AMPAPPOLearner.process_batch", "AMPAPPOLearner.update"],
+      "callers": ["UniLab-owned resolve_amp_appo_runtime", "APPORunner generic hooks"],
+      "consumers": ["V-trace/APPO actor-critic update", "AMP health logging", "checkpoint owner"],
+      "state_reads": ["staged rollout", "expert transitions", "frozen D_k and normalizer"],
+      "state_writes": ["actor/critic", "replay", "AMP normalizer", "discriminator D_(k+1)", "AMP counters"],
+      "current_behavior": "uni_rl has generic async APPO but no AMP runner/learner and owns no AMP resolver",
+      "planned_behavior": "adapt the mature AMP transition prior into learner-only state with exact D_k ordering while leaving resolver ownership in UniLab",
+      "preserved_behavior": ["base V-trace/APPO update", "collector statelessness", "default play function"],
+      "forbidden_dependencies": ["UniLab/unisim imports", "discriminator in base optimizer", "collector discriminator", "synchronous loop"],
+      "tests": [
+        {"path": "uni_rl/tests/algos/test_amp_learner.py", "case": "call-order spy and gradient ownership", "expected": "D_k reward then APPO then D_(k+1), with no actor gradient into D"},
+        {"path": "uni_rl/tests/algos/test_amp_runner.py", "case": "195D expert/provenance, no reverse imports and probe close", "expected": "parent-owned neutral arrays and deterministic close"},
+        {"path": "uni_rl/tests/algos/test_amp_learner.py", "case": "invalid and empty batch", "expected": "zero mutation across every owner state"}
+      ],
+      "stop_condition": "learner order/ownership differs, mutable AMP state crosses process, or invalid batch mutates state"
+    },
+    {
+      "change_id": "P3-C10",
+      "owner": "uni_rl AMP checkpoint owner",
+      "file": "uni_rl/src/uni_rl/algos/amp/checkpoint.py",
+      "symbols": ["validate_amp_checkpoint", "load_amp_resume_state", "extract_amp_actor_state", "save_amp_checkpoint_atomic"],
+      "callers": ["AMPAPPORunner save/restore", "UniLab actor playback builder"],
+      "consumers": ["learner resume", "actor-only playback"],
+      "state_reads": ["complete learner state", "expert provenance", "schema/runtime/dim identities", "full-resume method fingerprint"],
+      "state_writes": ["temporary checkpoint", "atomic target replacement", "validated learner state on resume"],
+      "current_behavior": "generic APPO checkpoint has no AMP schema/state",
+      "planned_behavior": "save and preflight a complete versioned AMP payload, compare a deterministic full-resume fingerprint for task/style/body-order/discriminator/replay/normalizer/APPO identities, and expose a narrower actor-only extractor",
+      "preserved_behavior": ["generic APPO checkpoint bytes/flow", "prior checkpoint on interrupted save"],
+      "forbidden_dependencies": ["partial restore", "legacy/mixed identity acceptance", "non-atomic replacement"],
+      "tests": [
+        {"path": "uni_rl/tests/algos/test_amp_checkpoint.py", "case": "complete round trip including replay/RNG", "expected": "exact cold-state equivalence after resume"},
+        {"path": "uni_rl/tests/algos/test_amp_checkpoint.py", "case": "each method fingerprint category, preflight before mutation and legacy rejection", "expected": "all invalid payloads fail with zero learner mutation"},
+        {"path": "uni_rl/tests/algos/test_amp_checkpoint.py", "case": "interrupted atomic save and actor-only compatibility matrix", "expected": "previous checkpoint remains readable and playback compares only actor/sim2sim identities"}
+      ],
+      "stop_condition": "validation occurs after mutation, save is non-atomic or legacy checkpoint is accepted"
+    },
+    {
+      "change_id": "P3-C11",
+      "owner": "UniLab APPO composition root",
+      "file": "src/unilab/scripts/amp_appo.py + src/unilab/scripts/train_appo.py + uni_rl/src/uni_rl/algos/appo/runtime.py",
+      "symbols": ["APPORuntime.runner_kwargs", "unilab.scripts.amp_appo.resolve_amp_appo_runtime", "build_appo_runner_kwargs collision-checked merge"],
+      "callers": ["train_appo.main", "uni_rl runtime resolver"],
+      "consumers": ["AMPAPPORunner"],
+      "state_reads": ["composed config", "validated expert arrays/provenance"],
+      "state_writes": ["package-neutral runner kwargs"],
+      "current_behavior": "generic APPO kwargs have no expert input",
+      "planned_behavior": "the only AMP resolver is the UniLab Hydra dotted resolver; generic resolve_appo_runtime normalizes its result, applies default play fallback and default-empty APPORuntime.runner_kwargs, then the script collision-checks and merges before spawn",
+      "preserved_behavior": ["single generic entrypoint", "APPO/HORA kwargs", "existing try/finally cleanup"],
+      "forbidden_dependencies": ["task-name branch", "UniLab runner subclass", "asset load after spawn"],
+      "tests": [
+        {"path": "tests/scripts/test_train_scripts.py", "case": "AMP and default runner kwargs snapshots", "expected": "only selected AMP runtime receives neutral expert data"},
+        {"path": "tests/scripts/test_train_scripts.py", "case": "manifest failure allocation spy", "expected": "no runner, collector or environment is allocated"}
+      ],
+      "stop_condition": "composition requires an AMP branch in generic code or expert loading occurs after allocation"
+    },
+    {
+      "change_id": "P3-C12",
+      "owner": "UniLab checkpoint path and playback assembly",
+      "file": "src/unilab/training/run.py + src/unilab/visualization/interactive_playback.py + src/unilab/scripts/play_interactive.py",
+      "symbols": ["resolve_appo_checkpoint_from_config", "create_appo_playback_session", "_build_appo_actor"],
+      "callers": ["train_appo.play_appo", "play_interactive"],
+      "consumers": ["sim2sim preflight", "uni_rl actor extractor", "MuJoCo actor playback"],
+      "state_reads": ["run config", "checkpoint path", "validated actor state"],
+      "state_writes": ["actor parameters after complete preflight"],
+      "current_behavior": "checkpoint resolution is duplicated and generic actor load owns payload assumptions",
+      "planned_behavior": "centralize cold-path resolution and use validated new-schema actor extraction before playback load",
+      "preserved_behavior": ["generic APPO/HORA playback", "zero-action fallback", "final env close"],
+      "forbidden_dependencies": ["AMP CLI route", "training-only AMP object in playback", "legacy checkpoint acceptance"],
+      "tests": [
+        {"path": "tests/visualization/test_interactive_playback.py", "case": "new AMP actor-only load and legacy/malformed rejection", "expected": "preflight precedes env/actor mutation and only actor loads"},
+        {"path": "tests/scripts/test_train_scripts.py", "case": "generic APPO composition selects g1_amp_walk", "expected": "existing route delegates without AMP branch"}
+      ],
+      "stop_condition": "an invalid checkpoint constructs an env, training state enters playback or generic playback changes"
+    },
+    {
+      "change_id": "P3-C13",
+      "owner": "UniLab sim2sim contract",
+      "file": "src/unilab/utils/sim2sim.py",
+      "symbols": ["DENYLIST", "SNAPSHOT_FIELDS"],
+      "callers": ["ExperimentTracker.start", "APPO playback entrypoints"],
+      "consumers": ["run_config.json", "playback preflight"],
+      "state_reads": ["public observation mapping", "runtime identity", "actor dimensions"],
+      "state_writes": ["contract snapshot"],
+      "current_behavior": "snapshot lacks AMP public-group/runtime identity",
+      "planned_behavior": "strictly snapshot and compare AMP mapping/runtime/dimensions while preserving old generic warning behavior",
+      "preserved_behavior": ["existing DENYLIST/WARNING_LIST/ALLOWLIST semantics", "generic old-snapshot warnings"],
+      "forbidden_dependencies": ["duplicate checkpoint semantic owner", "task reward fields as network-shape authority"],
+      "tests": [
+        {"path": "tests/training/test_sim2sim_resolver.py", "case": "identical AMP config and three mismatch dimensions", "expected": "identity passes and mapping/runtime/shape mismatches fail strictly"},
+        {"path": "tests/training/test_sim2sim_resolver.py", "case": "old generic snapshot", "expected": "existing warning behavior remains unchanged"}
+      ],
+      "stop_condition": "semantic identity is split inconsistently between sim2sim and checkpoint owners"
+    },
+    {
+      "change_id": "P3-C14",
+      "owner": "UniLab root dependency and lockfile contract",
+      "file": "pyproject.toml + uv.lock",
+      "symbols": ["mujoco-uni-runtime constraint", "unisim-core constraint", "unilab-rl constraint", "resolved artifact hashes"],
+      "callers": ["uv sync", "CI", "server installation"],
+      "consumers": ["UniLab runtime imports", "offline integration evidence", "bounded runtime probe"],
+      "state_reads": ["released B0 runtime artifact", "released B1 unisim artifact", "released B3 uni_rl artifact"],
+      "state_writes": ["compatible exact dependency constraints", "resolved cross-platform lock entries"],
+      "current_behavior": "UniLab directly pins mujoco-uni-runtime 0.5.0 and current unisim/uni_rl releases",
+      "planned_behavior": "pin the exact reviewed B0-B3 releases and hashes together after all owner packages publish",
+      "preserved_behavior": ["frozen reproducible installs", "platform-specific wheel resolution", "rollback to the prior lockfile"],
+      "forbidden_dependencies": ["editable package path in final evidence", "mixed old/new owner versions", "unhashed artifact"],
+      "tests": [
+        {"path": "uv.lock", "case": "uv lock --check and frozen/no-sync import identity", "expected": "all three package versions and runtime artifact hashes match the reviewed release set"},
+        {"path": "tests/test_import_ownership.py", "case": "installed source/version boundary", "expected": "UniLab imports the pinned released packages with no reverse dependency"}
+      ],
+      "stop_condition": "dependency resolution keeps 0.5.0, mixes package generations, uses editable sources or lacks an exact artifact hash"
+    }
+  ],
+  "lifecycle_scope": {
+    "required_paths": ["init/materialize", "reset/resample", "step/refresh", "terminal/autoreset", "async publish/update", "save", "reload/play", "error/cleanup"]
+  },
+  "lifecycle_paths": [
+    {"path": "init/materialize", "before": "generic APPO resolves and backend exposes final sensors", "after": "AMP runtime/expert identity validates and task lazily binds public history before allocation/spawn", "invariant": "asset work is cold path and package dependencies point downward only"},
+    {"path": "reset/resample", "before": "manager reset computes generic output groups", "after": "fixed command, amp rows and selected history rows are reinitialized", "invariant": "other rows and non-AMP tasks are unchanged"},
+    {"path": "step/refresh", "before": "one native backend step precedes reward and observations", "after": "runtime carries history per env across callback rounds and the same native call exports four samples consumed by collision reward and AMP observation", "invariant": "exactly one BatchEnvPool.step with nstep=4 and no cross-env history"},
+    {"path": "terminal/autoreset", "before": "all public groups are copied before reset", "after": "final amp becomes terminal next state while reset amp remains collector carry", "invariant": "terminal and carry identities are never conflated"},
+    {"path": "async publish/update", "before": "fixed fields feed generic APPO", "after": "validated AMP pairs feed frozen-D_k reward then APPO then discriminator update", "invariant": "no partial publication or cross-process mutable AMP state"},
+    {"path": "save", "before": "generic runner saves APPO state", "after": "AMP owner atomically saves complete versioned state", "invariant": "generic save stays unchanged and prior file survives interruption"},
+    {"path": "reload/play", "before": "generic checkpoint resolution loads actor/runtime state", "after": "AMP full resume or actor-only extraction occurs only after exact preflight", "invariant": "no partial mutation and no training-only object in playback"},
+    {"path": "error/cleanup", "before": "runner owns child/shared-resource cleanup", "after": "the same owner covers AMP fields and all pre-spawn/child failures", "invariant": "no leaked env, shared memory, queue, pipe, tracker or zombie collector"}
+  ],
+  "batches": [
+    {
+      "batch_id": "B0-native-runtime-history",
+      "change_ids": ["P3-C00"],
+      "depends_on": [],
+      "entry_conditions": ["user-confirmed exact plan hash", "publisher checkout matching bound 0.5.0 sdist", "runtime issue/ADR and Git authority", "current pre-slice mature-method receipt"],
+      "exit_evidence": ["native direct/callback/history/compatibility tests", "cross-platform wheels", "changelog", "exact >=0.6.0,<0.7 artifact hash", "refreshed post-slice mature-method receipt"],
+      "stop_condition": "source cannot be identity-bound, history needs multiple Python/native step calls, default behavior changes or no released artifact can be pinned"
+    },
+    {
+      "batch_id": "B1-unisim-history",
+      "change_ids": ["P3-C01", "P3-C02"],
+      "depends_on": ["B0-native-runtime-history"],
+      "entry_conditions": ["user-confirmed exact plan hash", "unisim issue/ADR scope receipt", "authorized isolated checkout", "pinned B0 runtime artifact", "current pre-slice mature-method receipt"],
+      "exit_evidence": ["focused contract/MuJoCo tests", "ON/OFF physics identity", "make check and make package", "docs/changelog", "current mature-method slice receipt"],
+      "stop_condition": "native history is unavailable, dispatch count changes, disabled output drifts or reset isolation fails"
+    },
+    {
+      "batch_id": "B2-unilab-task-data",
+      "change_ids": ["P3-C03", "P3-C04", "P3-C05", "P3-C06"],
+      "depends_on": ["B1-unisim-history"],
+      "entry_conditions": ["pinned B1 public contract", "expert blob and manifest identity available", "accepted Test Cards", "current pre-slice mature-method receipt"],
+      "exit_evidence": ["manager/task/asset/config focused tests", "generic G1/APPO snapshots unchanged", "current mature-method slice receipt"],
+      "stop_condition": "private backend access, pose/gait authority, runtime asset parsing or AMP representation drift appears"
+    },
+    {
+      "batch_id": "B3-unirl-amp-async",
+      "change_ids": ["P3-C07", "P3-C08", "P3-C09", "P3-C10"],
+      "depends_on": ["B2-unilab-task-data"],
+      "entry_conditions": ["pinned public AMP observation/expert types", "uni_rl issue/ADR scope receipt", "authorized isolated checkout", "accepted Test Cards", "current pre-slice mature-method receipt"],
+      "exit_evidence": ["IPC/terminal/order/checkpoint focused tests", "existing APPO/HORA suite", "format/mypy/pyright/pytest coverage gate", "changelog and version at least 1.1.0", "current mature-method slice receipt"],
+      "stop_condition": "reverse import, generic behavior drift, invalid-batch mutation, partial restore or cleanup failure"
+    },
+    {
+      "batch_id": "B4-composition-offline-closure",
+      "change_ids": ["P3-C11", "P3-C12", "P3-C13", "P3-C14"],
+      "depends_on": ["B2-unilab-task-data", "B3-unirl-amp-async"],
+      "entry_conditions": ["pinned B0 runtime, B1 unisim and B3 uni_rl builds", "all owner suites green", "new checkpoint schema published"],
+      "exit_evidence": ["UniLab focused tests", "make check", "make test", "make test-all", "offline save/reload/config proof", "independent current-head code review"],
+      "stop_condition": "generic regression, legacy checkpoint acceptance or any lifecycle path remains unproved"
+    }
+  ],
+  "open_decisions": [],
+  "deviations": [],
+  "plan_review": {
+    "status": "READY",
+    "receipt": "phase3-plan-review-r2.json"
+  },
+  "confirmation": {
+    "status": "USER_CONFIRMED",
+    "receipt": "User message on 2026-09-08: 确认 UNILAB-AMP-PHASE3-PLAN-v001 revision 2，hash f74a65f16d42acc471d6359c2cb72b6b7f3a0d6d4b489a5e0185ca008f746c27",
+    "plan_content_hash": "sha256:f74a65f16d42acc471d6359c2cb72b6b7f3a0d6d4b489a5e0185ca008f746c27"
+  }
+}

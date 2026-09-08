@@ -29,6 +29,7 @@ from unilab.envs.mdp.commands.velocity_command import (
     UniformVelocityCommand,
     UniformVelocityCommandCfg,
 )
+from unilab.managers.command_manager import CommandTerm, CommandTermCfg
 from unilab.managers.manager_base import ManagerTermBase, ManagerTermBaseCfg
 from unilab.managers.scene_entity_config import SceneEntityCfg
 from unilab.tasks.locomotion.common.manager_terms import SensorTermBase
@@ -626,6 +627,38 @@ def upper_body_pose(
     return weighted_pose(env, weights, asset_cfg=asset_cfg)
 
 
+def track_base_height_exp_smooth(
+    env: ManagerBasedRlEnv,
+    tracking_sigma: float,
+    command_name: str = "height",
+    asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+) -> np.ndarray:
+    """Reward smooth tracking of the per-environment base-height command."""
+
+    sigma = _real(
+        "track_base_height_exp_smooth",
+        "tracking_sigma",
+        tracking_sigma,
+        minimum=0.0,
+        strict_minimum=True,
+    )
+    target = env.command_manager.get_command(command_name)
+    target = _state(
+        "track_base_height_exp_smooth",
+        f"command '{command_name}'",
+        target,
+        (env.num_envs, 1),
+    )[:, 0]
+    position = _state(
+        "track_base_height_exp_smooth",
+        "root position",
+        _asset(env, asset_cfg).data.root_link_pos_w,
+        (env.num_envs, 3),
+    )
+    height_error = np.square(position[:, 2] - target)
+    return np.asarray(np.exp(-height_error / sigma), dtype=get_global_dtype())
+
+
 # ---------------------------------------------------------------------------
 # Velocity command term (legacy dead zone + standing zeroing semantics)
 # ---------------------------------------------------------------------------
@@ -661,6 +694,56 @@ class G1VelocityCommand(UniformVelocityCommand):
         planar = self.vel_command_b[env_ids, :2]
         moving = np.linalg.norm(planar, axis=1) > self._planar_dead_zone
         self.vel_command_b[env_ids, :2] = planar * moving[:, None]
+
+
+@dataclass(kw_only=True)
+class G1HeightCommandCfg(CommandTermCfg):
+    """Legacy G1 scalar base-height command, sampled independently at reset."""
+
+    height_range: tuple[float, float] = (0.2, 0.754)
+    default_height: float = 0.754
+    random_height_during_walking: bool = False
+    observe_height_command: bool = True
+
+    def build(self, env: ManagerBasedRlEnv) -> G1HeightCommand:
+        return G1HeightCommand(self, env)
+
+
+class G1HeightCommand(CommandTerm):
+    cfg: G1HeightCommandCfg  # pyright: ignore[reportIncompatibleVariableOverride]
+
+    def __init__(self, cfg: G1HeightCommandCfg, env: ManagerBasedRlEnv):
+        if len(cfg.height_range) != 2:
+            raise ValueError("G1HeightCommand height_range must contain exactly two values")
+        low = _real("G1HeightCommand", "height_range[0]", cfg.height_range[0])
+        high = _real("G1HeightCommand", "height_range[1]", cfg.height_range[1])
+        self._height_range = (min(low, high), max(low, high))
+        self._default_height = _real("G1HeightCommand", "default_height", cfg.default_height)
+        if not isinstance(cfg.random_height_during_walking, bool):
+            raise TypeError("G1HeightCommand random_height_during_walking must be bool")
+        if not isinstance(cfg.observe_height_command, bool) or not cfg.observe_height_command:
+            raise ValueError("G1HeightCommand requires observe_height_command=true")
+        super().__init__(cfg, env)
+        self.height_command = np.full(
+            (self.num_envs, 1), self._default_height, dtype=get_global_dtype()
+        )
+
+    @property
+    def command(self) -> np.ndarray:
+        return self.height_command
+
+    def _update_metrics(self, env_ids: np.ndarray | None = None) -> None:
+        del env_ids
+
+    def _resample_command(self, env_ids: np.ndarray) -> None:
+        if self.cfg.random_height_during_walking:
+            low, high = self._height_range
+            self.height_command[env_ids, 0] = self._env.rng.uniform(low, high, len(env_ids))
+        else:
+            self.height_command[env_ids, 0] = self._default_height
+
+    def _update_command(self, env_ids: np.ndarray | None) -> None:
+        del env_ids
 
 
 # ---------------------------------------------------------------------------
@@ -817,6 +900,8 @@ def make_g1_walk_env(
 
 __all__ = [
     "G1GaitPhase",
+    "G1HeightCommand",
+    "G1HeightCommandCfg",
     "G1PenaltyCurriculum",
     "G1VelocityCommand",
     "G1VelocityCommandCfg",
@@ -833,6 +918,7 @@ __all__ = [
     "make_g1_walk_env",
     "penalty_close_feet_xy",
     "penalty_feet_ori",
+    "track_base_height_exp_smooth",
     "under_speed",
     "upper_body_pose",
     "weighted_pose",

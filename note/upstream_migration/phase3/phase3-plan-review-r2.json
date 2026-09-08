@@ -1,0 +1,124 @@
+{
+  "schema_version": "code-review-expert/v1",
+  "review_id": "CRE-UNILAB-AMP-PHASE3-PLAN-R2-20260907",
+  "mode": "plan",
+  "profiles": [
+    "standard",
+    "module-boundary",
+    "repository-discipline",
+    "research-ml"
+  ],
+  "verdict": "READY",
+  "scope": {
+    "requested": [
+      "independently review the revision-2 Phase 3 AMP async engineering plan"
+    ],
+    "preserved": [
+      "fixed-forward walk-only semantics, native nstep=4, asynchronous APPO and split owner boundaries"
+    ],
+    "forbidden": [
+      "production implementation, Git mutation, simulation, training or policy-quality claims"
+    ]
+  },
+  "identities": {
+    "project": "unilabsim/UniLab with unilabsim/unisim, unilabsim/unilab_rl and mujoco-uni-runtime",
+    "design": "AMP-WALK-METHOD-v003 and AMP-WALK-TRAIN-v004 at donor 205cbf59765242344cbce6b1b838ffbc7afb2052",
+    "contract": "UNILAB-AMP-PHASE3-PLAN-v001 revision 2",
+    "checkout": "UniLab@d9afc9656e63c82a64263f5a4dbd938ba1652af2; unisim@f69e7b2025a301e6e0ce57021d6baaa232741e1e; uni_rl@ce0050ecc77ec17de84b6b581148c67e1ae03caa; mujoco-uni-runtime 0.5.0 sdist sha256:a0c774da3607b6111d7c91155867377f9eb6d91ab6e0bbb97f15247df1ead9d7",
+    "review_object": "note/upstream_migration/phase3/2026-09-07-phase3-amp-async-engineering-plan.md@sha256:f74a65f16d42acc471d6359c2cb72b6b7f3a0d6d4b489a5e0185ca008f746c27"
+  },
+  "authority": {
+    "review": {
+      "status": "read-only",
+      "scope": "inspect the identity-bound plan and source owners"
+    },
+    "source_edits": {
+      "status": "not-authorized",
+      "scope": "no production source edit is admitted by this review"
+    },
+    "report_write": {
+      "status": "approved",
+      "scope": "write the Phase 3 planning review receipt",
+      "receipt": "user request dated 2026-09-07 to create an engineering plan"
+    }
+  },
+  "review_object": {
+    "kind": "plan",
+    "path": "2026-09-07-phase3-amp-async-engineering-plan.md",
+    "content_hash": "sha256:f74a65f16d42acc471d6359c2cb72b6b7f3a0d6d4b489a5e0185ca008f746c27",
+    "current": true
+  },
+  "repository_discipline": {
+    "status": "active",
+    "path": "../../../AGENTS.md",
+    "content_hash": "sha256:94e37c5d77cac8d72771199a851c63ab6e13f6336dcb0463ff768f5585cdc273",
+    "current": true
+  },
+  "dimensions": [
+    {
+      "name": "responsibility-ownership",
+      "disposition": "pass",
+      "evidence": "Native transport, public backend contract, task/config composition and algorithm/IPC/checkpoint state have distinct owners across four packages."
+    },
+    {
+      "name": "public-interface",
+      "disposition": "pass",
+      "evidence": "The plan binds runtime BatchEnvPool.step, unisim BackendSensorHistoryView, ManagerBasedRlEnv public groups and APPORuntime.runner_kwargs without private cross-owner calls."
+    },
+    {
+      "name": "dependency-direction",
+      "disposition": "pass",
+      "evidence": "mujoco-uni-runtime -> unisim -> UniLab EnvFactory -> uni_rl injection is preserved and reverse uni_rl imports are forbidden."
+    },
+    {
+      "name": "state-lifecycle",
+      "disposition": "pass",
+      "evidence": "Init, reset, native callback HISTORY carry, step, terminal/autoreset, async publish/update, save, reload/play and error cleanup are all mapped with invariants."
+    },
+    {
+      "name": "change-surface",
+      "disposition": "pass",
+      "evidence": "P3-C00 through P3-C14 are covered exactly once by dependency-ordered B0 through B4, followed by separately authorized runtime proof."
+    },
+    {
+      "name": "evidence-boundary",
+      "disposition": "pass",
+      "evidence": "Plan readiness is separated from implementation, runtime, training and policy-quality claims."
+    },
+    {
+      "name": "tensor-provenance",
+      "disposition": "pass",
+      "evidence": "195D state, 390D pair, N/T/features, float32 IPC, terminal identity, finiteness, expert hashes/FPS/body order and device transfer are frozen."
+    },
+    {
+      "name": "gradient-update-boundary",
+      "disposition": "pass",
+      "evidence": "The plan tests frozen D_k reward, detached APPO/V-trace update and subsequent learner-only D_(k+1) mutation."
+    },
+    {
+      "name": "persistence-evaluation",
+      "disposition": "pass",
+      "evidence": "Full resume uses a complete method fingerprint; actor-only playback uses a narrower explicit matrix; legacy checkpoints fail closed and saves are atomic."
+    },
+    {
+      "name": "proof-route",
+      "disposition": "pass",
+      "evidence": "Each function-level change has a behavior test and stop condition, each batch has entry/exit evidence, and owner/package/offline/runtime/policy-quality gates remain distinct."
+    }
+  ],
+  "findings": [],
+  "residual_risks": [
+    "The runtime publisher checkout, issue/ADR approvals, construction branches, release hashes and actual tests remain later entry/evidence gates.",
+    "A bounded sentinel can prove runtime wiring only; long training and human-like gait quality require separate authorization and audit."
+  ],
+  "blockers": [],
+  "claims": {
+    "maintainability": "reviewed",
+    "semantic_correctness": "not-claimed",
+    "module_correctness": "not-claimed",
+    "runtime_root_cause": "not-claimed",
+    "formal_route": "not-claimed",
+    "policy_quality": "not-claimed"
+  },
+  "dependencies": []
+}

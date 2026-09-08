@@ -5,8 +5,8 @@ dist/
 *.egg-info/
 
 # uv
-.venv/
-.python-version
+/.venv/
+/.python-version
 
 # Local secrets and credentials
 .env
@@ -128,4 +128,8 @@ G1_23DOF_PR_CHECKLIST.md
 APPO_HARDWARE_TIMING_ANALYSIS.md
 
 # Training log artifacts (checkpoints, ONNX exports)
-log/
+/logs/
+/checkpoints/
+/.codegraph/
+/.uv-cache/
+/.superpowers/

@@ -84,6 +84,7 @@ class ManagerBasedRlEnvCfg(EnvCfg):
     scale_rewards_by_dt: bool = True
     policy_observation_group: str = "policy"
     critic_observation_group: str | None = None
+    additional_observation_groups: dict[str, str] = field(default_factory=dict)
 
     def validate(self) -> None:
         for name, value in (("sim_dt", self.sim_dt), ("ctrl_dt", self.ctrl_dt)):
@@ -140,6 +141,17 @@ class ManagerBasedRlEnvCfg(EnvCfg):
                 raise ValueError("critic_observation_group must be a non-empty string or None")
             if self.critic_observation_group == self.policy_observation_group:
                 raise ValueError("policy and critic observation groups must be different")
+        if not isinstance(self.additional_observation_groups, dict):
+            raise TypeError("additional_observation_groups must be a dict")
+        for output_name, group_name in self.additional_observation_groups.items():
+            if not isinstance(output_name, str) or not output_name:
+                raise ValueError("additional observation output names must be non-empty strings")
+            if output_name in {"obs", "critic"}:
+                raise ValueError(
+                    f"additional observation mapping uses reserved output name '{output_name}'"
+                )
+            if not isinstance(group_name, str) or not group_name:
+                raise ValueError("additional observation group names must be non-empty strings")
         if not isinstance(self.scene, SceneCfg):
             raise TypeError(
                 "ManagerBasedRlEnvCfg scene must be a SceneCfg instance, "
@@ -256,6 +268,7 @@ class ManagerBasedRlEnv(NpEnv):
         self._uses_pre_step_control = False
 
         self._load_managers()
+        self._observation_output_mapping = self._build_observation_output_mapping()
         self._mapped_obs_dims = self._validate_observation_mapping()
         self._validate_substep_capabilities()
         self._configure_action_control()
@@ -342,12 +355,16 @@ class ManagerBasedRlEnv(NpEnv):
             else NullRecorderManager()
         )
 
-    def _validate_observation_mapping(self) -> dict[str, int]:
+    def _build_observation_output_mapping(self) -> dict[str, str]:
         mapping = {"obs": self._cfg.policy_observation_group}
         if self._cfg.critic_observation_group is not None:
             mapping["critic"] = self._cfg.critic_observation_group
+        mapping.update(self._cfg.additional_observation_groups)
+        return mapping
+
+    def _validate_observation_mapping(self) -> dict[str, int]:
         dims: dict[str, int] = {}
-        for output_name, group_name in mapping.items():
+        for output_name, group_name in self._observation_output_mapping.items():
             if group_name not in self.observation_manager.active_terms:
                 raise KeyError(
                     f"ManagerBasedRlEnv observation mapping '{output_name}' requests group "
@@ -640,11 +657,8 @@ class ManagerBasedRlEnv(NpEnv):
         manager_obs: dict[str, np.ndarray | dict[str, np.ndarray]],
         num_rows: int | None = None,
     ) -> dict[str, np.ndarray]:
-        mapping = {"obs": self._cfg.policy_observation_group}
-        if self._cfg.critic_observation_group is not None:
-            mapping["critic"] = self._cfg.critic_observation_group
         mapped: dict[str, np.ndarray] = {}
-        for output_name, group_name in mapping.items():
+        for output_name, group_name in self._observation_output_mapping.items():
             value = manager_obs[group_name]
             if not isinstance(value, np.ndarray):
                 raise TypeError(

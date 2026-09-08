@@ -272,9 +272,41 @@ def test_env_structural_denylist_is_the_env_subset():
         "env.actions",
         "env.policy_observation_group",
         "env.critic_observation_group",
+        "env.additional_observation_groups",
         "env.commands.motion.params.sampling_mode",
     ]
     assert set(ENV_STRUCTURAL_DENYLIST) <= set(DENYLIST)
+
+
+def test_amp_runtime_and_observation_mapping_are_strict_contract_fields(tmp_path):
+    source = OmegaConf.create(
+        {
+            "algo": {
+                "runtime_impl": "amp_appo",
+                "actor": {"hidden_dims": [512, 256, 128]},
+                "critic": {"hidden_dims": [512, 256, 128]},
+            },
+            "env": {"additional_observation_groups": {"amp": "amp_style"}},
+        }
+    )
+    snapshot = extract_contract_snapshot(source)
+    assert snapshot["algo.runtime_impl"] == "amp_appo"
+    assert snapshot["algo.actor.hidden_dims"] == [512, 256, 128]
+    assert snapshot["env.additional_observation_groups"] == {"amp": "amp_style"}
+    _write_sidecar(tmp_path, snapshot)
+
+    target = OmegaConf.create(
+        {
+            "algo": {
+                "runtime_impl": "appo",
+                "actor": {"hidden_dims": [512, 256, 128]},
+                "critic": {"hidden_dims": [512, 256, 128]},
+            },
+            "env": {"additional_observation_groups": {"amp": "other"}},
+        }
+    )
+    with pytest.raises(CrossBackendIncompatibleError, match="runtime_impl"):
+        resolve_sim2sim_config(tmp_path, target)
 
 
 def test_env_field_present_in_source_absent_in_target_raises(tmp_path):
