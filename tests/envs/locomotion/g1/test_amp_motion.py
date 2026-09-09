@@ -97,6 +97,22 @@ def test_expert_manifest_identities_keep_amp_mjlab_default_and_offer_regait() ->
     assert not (regait_path.parent / motion["file"]).exists()
 
 
+def test_v017_manifest_is_separate_from_original_expert_set() -> None:
+    baseline = json.loads(G1_AMP_EXPERT_MANIFESTS["amp_mjlab"].read_text())
+    assert [entry["file"] for entry in baseline["motions"]] == [
+        "walk_forward_loop_002__A022.npz", "walk_forward_loop_002__A024.npz"
+    ]
+    path = G1_AMP_EXPERT_MANIFESTS["regait_v017_a022"]
+    assert path.parent.name == "regait_v017_a022_313"
+    generated = json.loads(path.read_text())
+    assert len(generated["motions"]) == 1
+    motion = generated["motions"][0]
+    assert motion["frames"] == 313 and motion["fps"] == 50
+    assert motion["candidate_identity"] == (
+        "sha256:d41680b08c0a0a436ee3956ecfbd5d3457b7c09bec6ea7cb79799da3dfacdde5"
+    )
+
+
 def test_expert_manifest_hash_mismatch_fails_before_array_loading(tmp_path: Path) -> None:
     name = "walk_forward_bad.npz"
     _write_motion(tmp_path / name, 0.0)

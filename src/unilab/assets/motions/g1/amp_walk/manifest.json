@@ -19,7 +19,21 @@
     "right_elbow_link",
     "right_wrist_yaw_link"
   ],
-  "body_indices": [0, 2, 4, 6, 8, 10, 12, 17, 19, 22, 24, 26, 29],
+  "body_indices": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    12,
+    17,
+    19,
+    22,
+    24,
+    26,
+    29
+  ],
   "anchor_body_name": "torso_link",
   "anchor_body_index": 15,
   "motions": [

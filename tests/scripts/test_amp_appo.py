@@ -21,7 +21,8 @@ def _effective_amp_owner():
     return cfg, env
 
 
-def test_amp_runtime_resolves_package_neutral_expert_kwargs(monkeypatch) -> None:
+@pytest.mark.parametrize("expert_manifest", ["regait_v013_a022", "regait_v017_a022"])
+def test_amp_runtime_resolves_package_neutral_expert_kwargs(monkeypatch, expert_manifest) -> None:
     transitions = SimpleNamespace(
         current=np.zeros((3, 195), dtype=np.float32),
         next=np.ones((3, 195), dtype=np.float32),
@@ -38,7 +39,7 @@ def test_amp_runtime_resolves_package_neutral_expert_kwargs(monkeypatch) -> None
         "runtime_impl": "amp_appo",
         "runtime_mode": "train",
         "amp": {
-            "expert_manifest": "regait_v013_a022",
+            "expert_manifest": expert_manifest,
             "observation_dim": 195,
             "reward_coef": 0.1,
         },
@@ -62,7 +63,7 @@ def test_amp_runtime_resolves_package_neutral_expert_kwargs(monkeypatch) -> None
         "amp_method_fingerprint",
     }
     assert runtime.runner_kwargs["amp_expert_current"].shape == (3, 195)
-    assert selected == ["regait_v013_a022"]
+    assert selected == [expert_manifest]
     fingerprint = runtime.runner_kwargs["amp_method_fingerprint"]
     assert fingerprint["task"]["command"] == [1.0, 0.0, 0.0]
     assert fingerprint["observation"]["amp_dim"] == 195

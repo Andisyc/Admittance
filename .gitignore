@@ -68,16 +68,6 @@ issues/
 issue2/
 docs/superpowers/
 
-# Motion assets (downloaded from HF at runtime)
-src/unilab/assets/motions/g1/*.npz
-src/unilab/assets/motions/g1/*.csv
-src/unilab/assets/motions/g1/**/*.npz
-src/unilab/assets/motions/g1/**/*.csv
-src/unilab/assets/motions/g1/flip
-src/unilab/assets/motions/g1/flip_npz
-src/unilab/assets/motions/x2/*.npz
-src/unilab/assets/motions/x2/*.csv
-
 # Robot mesh assets (downloaded from HF at runtime)
 src/unilab/assets/robots/x2/meshes/*.STL
 src/unilab/assets/robots/g1/assets/
