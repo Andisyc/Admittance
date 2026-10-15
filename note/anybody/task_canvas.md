@@ -4,25 +4,25 @@
 
 ## 当前游标与授权
 
-- 用户已确认：在当前 `ADAPT/Admittance` 中接入 Anybody Encoder–Decoder，并以多步、从粗到细的方式规划异步训练链路。
-- 当前授权：用户明确要求将 S2 网络代码和测试放回 Admittance、重新提交；误建的个人 `unilab_rl` fork 已由用户手动删除，无需继续申请删除权限。不接入训练器或切换运行依赖。
-- 当前进度：**S1、S2 已完成，阶段验收 2/6**。S2 已通过 CPU 网络数值、梯度、错误输入及包边界检查；实际环境和异步训练链路尚未接通。
-- 交付纠正：先前将模型写入外部 `unilab_rl` 并创建个人 fork 是错误的仓库归属判断，已由用户纠正。本轮源码、测试、参考样例与看板统一提交至 `Andisyc/Admittance` 的 `feat/anybody-muse-s2` 分支；用户已手动删除误建 fork。GitHub 提交不代表 S3–S6 链路验收。
-- 下一步：规划 S3 观测与机器人动作数据适配；本轮止于 S2。S2/S3 不选择训练目标，训练方式由用户明确延后到 S4（E5）。
-- 当前工程依据：用户接受的 S1 范围及下列 `ANYBODY-IO-v1` 接口记录。尚无 active training/method contract；训练部分继续保持 proposal，不将接口记录升级为策略或运行证据。
-- 维护方式：只更新本文件的当前状态、工程包和检查项；证据按 E 编号追加。无需另建 registry、JSON 清单、重复计划或独立日志文件。
+- 用户已确认：在当前 `ADAPT/Admittance` 中接入 Anybody Encoder–Decoder，**以 AMASS 为训练数据来源**，后续使用 UniLab 异步训练架构。不能用已有 G1 NPZ 接入替代 AMASS 数据接入。
+- 当前授权：用户要求完成 S3 并提交到自己的 `Andisyc/Admittance`；最新指令为**不在本地下载或保留训练数据，不在本地训练，后续走远程 SSH**。此前本地数据验收仅为历史证据；当前不执行原始数据下载、优化器或训练。
+- 当前进度：**S1、S2 基线和 S3 数据层已完成，阶段验收 3/6**。S3 已实现原始 AMASS 读取、窗口/批次、显式分组划分，并验证 384 条真实动作。网络输入特征/训练标签和异步训练尚待 S4，不把人体数据当作已联接的 524 维机器人观测。
+- 交付位置：S2 已在 `Andisyc/Admittance` 的 `feat/anybody-muse-s2` 分支提交至 `52466db7`；误建 fork 已由用户手动删除。S3 代码、测试、远程下载入口和本看板在同一分支交付；原始数据当前不在本地工作区，也不进入 Git。逐文件清单/划分需由远程命令重新生成，不能将历史统计冒充已恢复的清单。
+- 下一步：规划 S4 的 AMASS 特征/监督到模型的映射、异步训练接入及远程 SSH 运行条件；先明确训练目标和网络输入输出，不在本地启动训练。
+- 当前工程依据：E10 的原项目源码核查和修正后的 S3 工程包。`ANYBODY-IO-v1` 保留为当前 G1 网络基线；AMASS 特征、训练标签和是否修改网络输入输出尚未冻结，训练方式继续留到 S4（E5）。
+- 协作入口：沿用本文件作为唯一当前看板；后续接手者先读本节、S3 和 E12。远程准备/取批见 [AMASS 数据说明](../../datasets/amass/README.md)；manifest 和 splits 由该命令在服务器生成。本轮没有 SSH 连接信息，未执行远程下载或训练。
 
 ## 系统边界与证据基线
 
-终点：Encoder–Decoder 可在当前 Admittance 通过配置构建，接收明确语义的观测，经现有异步训练链路更新，并完成保存、重载及确定性推理验证。
+终点：以 AMASS 为数据来源，Encoder–Decoder 可在当前 Admittance 通过配置构建，经明确的数据/监督接口和 UniLab 异步训练链路更新，完成保存、重载及确定性推理验证。人体动作表示到机器人控制的后续路线仍待决定，不因本轮讨论自动改为纯人体自编码器。
 
 范围外：外力补偿分支、PCGrad、导纳目标、奖励重设计、全量 AMASS 重定向、长期训练、策略效果结论和硬件部署。冻结 Decoder 的 latent RL 属于待选择的后续训练模式，不自动纳入此次架构接入。
 
 | 对象 | 身份/现状 | 证据等级 |
 | --- | --- | --- |
-| 当前目标 | `Andisyc/Admittance@70afeb9ac9708ec1320e3d62bdc7923d73abf957`；创建本文件前工作树干净 | code-confirmed |
+| 当前目标 | `Andisyc/Admittance`，分支 `feat/anybody-muse-s2`；S3 起点为 `52466db7f5d74989b064372ffc2f0e22a4b2a34f`，后续提交身份由 Git 记录 | code-confirmed |
 | 模型参考 | `hazel-hammer/Anybody@0cffa139eab0bc145c9216223e249f03c67a324c` | code-confirmed |
-| 训练包基线 | 当前 `pyproject.toml` / `uv.lock` 固定 `unilab-rl==1.0.0`；已读取同版本 PyPI sdist，未安装 | code-confirmed |
+| 训练包基线 | 当前 `pyproject.toml` / `uv.lock` 固定 `unilab-rl==1.0.0`；S3 准备阶段已在隔离临时环境安装，未切换项目依赖或修改锁文件 | code-confirmed |
 | 训练器依赖 / 网络 owner | 训练器仍为外部 `unilab-rl==1.0.0`；自定义纯网络归当前 Admittance 的 `src/unilab/models/anybody.py`。`../unilab_rl` 仅作上游源码参考，不作为开发或运行依赖 | code-confirmed |
 | 旧 UniLab | `unilab_stand@e1717b9…` 只作历史参考；其 `src/unilab/algos/torch/*` 路径不是当前修改目标 | code-confirmed |
 | 既有笔记 | `note/upstream_migration/` 是 AMP 历史规划/执行记录，不授权本主题；不修改其状态 | note-confirmed |
@@ -30,6 +30,11 @@
 当前 owner 链路：
 
 ```text
+已实现数据入口：
+AMASS 原始人体序列 -> 字段/帧率/模型校验 -> clip 内时序窗口
+  -> 人体表示与下游监督适配（待明确，不能直接当作机器人控制输入）
+
+当前已核对的机器人侧链路（尚未接通运行）：
 UniLab 机器人动作数据 / task observation terms
   -> ObservationManager（历史与 reset）
   -> UniLab Hydra 配置 / train_appo（组装）
@@ -46,19 +51,21 @@ UniLab 机器人动作数据 / task observation terms
 
 ## S1 接口结果：ANYBODY-IO-v1
 
-状态：S1 工程接口已收敛，可供 S2/S3 使用；训练模式不在该接口版本中选择。模型结构参考 MUSE-Transformer，观测/动作遵循目标 UniLab 的明确约定；不声明 Anybody 旧 checkpoint 的兼容性。
+状态：S1 工程接口已收敛，S2 已据此实现 G1 纯网络基线；它只约束未来机器人侧适配，不能代替 AMASS 数据接口。训练模式不在该接口版本中选择；不声明 Anybody 旧 checkpoint 的兼容性。
 
 | ID | 接口/不变量 | 当前状态 |
 | --- | --- | --- |
 | I1 | 代码与交付目标均为当前 Admittance；自定义网络在仓内，复用外部 `uni_rl` 训练器 | 用户明确纠正并确认 |
 | I2 | 移植 `_MUSETransformerEncoder` 和条件式 MLP Decoder；KP Encoder、teacher 网络及 donor 训练器不属于 S2 | S1 已绑定 |
-| I3 | goal/proprio/mask 的顺序、公式、单位、历史与 reset 见下表；`critic` 不进入模型 | S1 已绑定；S3 尚未实现 |
+| I3 | 机器人分支的 goal/proprio/mask 语义见下表；`critic` 不进入模型。AMASS 人体参数是另一个数据层 | G1 基线已绑定；AMASS 特征适配尚未定义 |
 | I4 | G1 起始配置为 latent=16、H=5、每帧 proprio=90、原始关节动作=29；网络维度由配置计算 | S2 已实现并通过 CPU 测试 |
 | I5 | 网络内部 latent 不等于算法采样动作；先完成网络与观测接入，首个训练方式延后到 S4 | 用户确认延后，E5；不阻塞 S2/S3 |
 | I6 | 单一纯模型语义供采集/更新/推理复用；normalizer 不进入纯模型，未来 actor wrapper 对预处理负责；mask 保持 0/1 | S1 已绑定；异步一致性待 S4 |
-| I7 | 仅接受已按目标机器人顺序导出的轨迹；不把原始 AMASS 当机器人 NPZ；不推断 donor 关节/刚体顺序等于目标顺序 | S1 已绑定；实际数据核验待 S3 |
+| I7 | AMASS 入口读取人体模型参数，不要求用户先提供 G1 NPZ；若后续选机器人控制路线，才进入具名重定向及物理观测/监督适配 | 用户明确 AMASS 数据来源；原 G1 NPZ 前置条件已纠正 |
 
 ### 精确输入与数据来源
+
+以下 524 维布局只描述当前 S2 的 G1 默认网络。AMASS 的人体姿态、根平移、体型参数或帧率不能按维度凑入其中；AMASS 数据入口完成后仍须单独验证其特征到网络的映射。
 
 `obs` 是 float32 `[..., 524]`，下列区间为 Python 左闭右开切片。全部值须有限。目标机器人/关节顺序取专用配置继承的 [G1 owner YAML](../../src/unilab/conf/appo/task/g1_motion_tracking/mujoco.yaml) 中 `scene.entities.robot.joint_names` 的具名 29 项顺序：左腿 6、右腿 6、腰 3、左臂 7、右臂 7。引用这个顺序，不另写第二份权威列表。参考轨迹及 actions 必须使用同一具名顺序，维度相同不视为顺序相同。
 
@@ -105,16 +112,16 @@ S4 最便宜的否决检查：对固定观测分别走 collector 与 learner 的
 | --- | --- | --- | --- | --- |
 | S1 接口与边界 | 本看板；Anybody 参考模型、UniLab 配置和 `uni_rl` owner | 用户指定目标仓库 | I2–I4/I6–I7 与源码根目录明确；I5 按用户选择延后，不阻塞纯模型 | 已完成，E5–E8；源码/文档层 |
 | S2 纯模型 | Admittance `unilab.models` 中的 Encoder、Decoder、组合模型 | S1 的 I2/I4 | 固定权重/输入与 donor 参考输出对照，梯度及错误输入检查通过 | 已完成；迁入 Admittance 后 39 项网络检查通过 |
-| S3 观测与数据 | UniLab task terms、ObservationManager 配置、MotionLoader 适配 | S1 的 I3/I7；联接依赖 S2 | 真实 task 布局可被模型解析；历史/部分 reset/动作映射正确 | 未开始 |
+| S3 AMASS 数据层 | Admittance 的人体序列读取、clip 内窗口及批次 | E10 格式核查及真实样本 | 原始序列可读、不串 clip、分组不泄漏，可输出含时间/来源的批次 | 已完成：384 条真实动作、108 项聚焦/回归测试，E11；模型联接留至 S4 |
 | S4 异步训练接入 | Admittance 自定义 actor/runtime 与 owner YAML；复用外部 `uni_rl` | S2、S3；I5 必须确定 | 同步权重下采集/更新语义一致，授权参数实际更新，生命周期复用 | 未开始 |
 | S5 保存与推理 | `uni_rl` checkpoint；UniLab playback、sim2sim、导出 | S4 模型/训练状态确定 | fresh reload 动作一致，恢复训练与错误配置拒绝有效，完整推理导出一致 | 未开始 |
 | S6 整链验收 | focused tests、短异步集成及最终回归 | S2–S5 | 短链运行/保存/恢复/退出证据齐全，默认路径回归通过 | 未开始 |
 
-S1 冻结后，S2 纯模型与 S3 数据/观测准备可以独立开展；S4 必须等待二者接口验收。本表描述依赖，不授权自动开启多个 agent。
+S3 的原始 AMASS 读取可以先于最终训练路线开展；人体特征到当前 G1 网络的映射不能据旧 S1 自动成立。S4 的优化更新须等待数据与监督接口明确。本表描述依赖，不授权自动开启多个 agent。
 
 ## engineering-plan：每步工程包
 
-S1/S2 已执行，其余新增文件名和命令仍为后续计划。当前所有自定义实现与测试均归 Admittance；不在临时 sdist、site-packages 或个人训练包 fork 内修改生产代码。
+S1–S3 已执行，S4–S6 文件名和命令仍为后续计划。所有自定义实现与测试均归 Admittance；临时环境仅用于测试，不修改外部包的生产源码。
 
 ### S1 — 接口与边界收敛
 
@@ -145,15 +152,18 @@ S2 验收结果（2026-10-15，CPU）：
 - 完整 gate 尝试：`UV_OFFLINE=1 UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/anybody-s2-uv-cache make check` / `make test`。因项目尚未安装 ruff / pytest 分别退出 2，不能声明全仓通过。uv 创建的空 `.venv` 随后清理；未同步依赖或修改锁文件。
 - 等级：network-test-confirmed / static-check-confirmed。没有修改既有训练代码、包配置或锁文件；没有运行仿真、优化器训练、GPU 验证、导出或完整 PR gate，不将网络测试升级为策略质量证据。
 
-### S3 — 观测历史与机器人数据适配
+### S3 — AMASS 数据读取、窗口与批次（已完成）
 
-- **Change / Why**：在当前 UniLab 的 `src/unilab/conf/appo/task/` 增加专用 owner YAML，复用 `ObservationManager` 历史能力；必要语义适配放在 `src/unilab/tasks/motion_tracking/common/manager_terms.py` 和 `motion_loader.py` 的最小边界。
-- **Preserve**：`obs`/`critic` 分离、现有 task 默认配置、单位与控制周期、clip 内采样和部分 reset 隔离。
-- **Allowed scope**：专用配置、确有缺失的 observation/data adapter；拟新增 `tests/tasks/test_anybody_observations.py`。
-- **Forbidden scope**：新增第二套历史缓冲、热路径解析 XML、仅按数组下标猜测关节/刚体映射、全量 AMASS 转换器、改 backend 或 reward。
-- **Depends on**：I3/I7；模型联接验证依赖 S2。
-- **Done when / Check**：`uv run pytest tests/tasks/test_anybody_observations.py tests/managers/test_observation_partial_reset.py tests/envs/test_motion_loader.py -q`；用有可辨识关节/帧值的样本检查时序、部分 reset 不串行、映射和无效元数据拒绝。
-- **Stop**：只有原始 AMASS 且缺少重定向数据，或字段坐标/来源无法确定；保留已验证布局，不将未知值补零。
+- **Change / Why**：先建立原始 AMASS 人体序列入口，纠正“已有 G1 NPZ 就是 AMASS 接入”的错误。原项目中未找到可直接移植的原始 AMASS reader；不能复制机器人 loader 后改名充当 AMASS reader。
+- **Preserve**：当前 S2 网络数学行为、默认 G1 task、外部 `uni_rl` 依赖方向、序列时间语义。训练目标仍由用户在 S4 选择。
+- **Allowed scope / 实际文件**：`src/unilab/data/amass.py` / `__init__.py` 及读取器测试；补充 `amass_download.py`、`scripts/motion/download_amass.py` 和模拟下载测试，供远程服务器显式准备固定版本子集。项目仅保留 `datasets/amass/README.md`；manifest/splits 在远程下载后生成。`.gitignore` 覆盖 raw/archives/cache。未改 S2 网络、G1 task 或项目依赖/锁文件。
+- **Forbidden scope**：在本地重新下载训练数据或启动训练、下载整个 AMASS/人体模型、伪造机器人状态/动作标签、自行选择重建或控制损失、改写 S2 输入输出。最新远程数据要求覆盖此前本地下载要求。
+- **Depends on**：E10 格式核查和 E11 真实数据验收已完成；远程实际数据准备需要服务器环境/连接条件。原本完整逐文件清单已不在工作区；当前固定源版本及筛选规则见远程准备模块。
+- **S3.1 原始读取**：`AmassClip` / `load_amass_clip(path, ...)` 保留人体参数、帧率和来源；检查帧数一致、有限值、合法 fps、已声明格式。不能确定的模型/坐标信息保留为未确认，使用它进行特征转换前必须明确；不能仅凭维度猜测人体模型。
+- **S3.2 窗口与批次**：`AmassWindowDataset` 按显式 window_length / stride 在单条 clip 内切片，只缓存一条解码序列，支持 Torch DataLoader。`split_amass_files` 支持先按 clip 分组，或由调用者提供明确 subject 分组后划分。本子集使用源 manifest 的 CMU subject 信息实现受试者隔离；保留原始帧率和精度。短序列在 dataset 中显式拒绝，本次 64 帧示例的两条短文件保留且列入 exclusions，不补零。
+- **S3.3 数据验收**：合成带标记帧的样例覆盖字段/帧率/有限值错误、窗口顺序、不跨 clip、划分不泄漏和短序列处理；再读取一份真实 AMASS 文件并构建一批窗口，报告原始与批次形状/时间。核对数据模块不改动当前 S2 模型与默认训练配置。
+- **Done when / 实际证据**：读取器及网络/loader/reset 的 108 项回归通过，加入远程准备模拟检查后共 116 项通过。E11 曾逐份验证 384 条真实文件及所有 382 条可用 clip 的首/尾窗口、60/120 Hz 混合时标；该历史数据现不在本地。远程脚本当前仅有模拟执行和源列表元数据验证，未宣称已在服务器下载成功。详细检查限制见 E11/E12。
+- **Stop**：数据变体、坐标系或标签来源无法确认，或需要改变网络输出语义时，明确缺口并回到相应接口决定；不将人体数据零填充成 524 维，不从人体关节姿态直接生成未经定义的控制标签。
 
 ### S4 — 接入现有异步训练器
 
@@ -161,7 +171,7 @@ S2 验收结果（2026-10-15，CPU）：
 - **Preserve**：`EnvFactory` 注入、既有 AsyncRunner 生命周期、共享权重协议、V-trace 与 timeout 语义、默认 MLP/APPO/HORA。
 - **Allowed scope**：Admittance 内自定义策略/训练器扩展、专用配置和组装；拟新增仓内 `tests/training/test_anybody_appo.py` 与 `tests/scripts/test_anybody_appo.py`。复用现有外部 runner/learner 基类；不复制整个训练包。
 - **Forbidden scope**：私建异步同步协议、`uni_rl -> unilab` 反向 import、未选择训练模式便改缓存 schema，或将训练损失塞进 UniLab 入口脚本。
-- **Depends on**：S2/S3；I5 冻结。关节空间 APPO 可保持动作缓存语义；若选蒸馏则另列监督更新工程包；若选 latent RL 则显式区分采样动作/log-prob 与解码关节动作，并先回到总体路线补齐其 owner。
+- **Depends on**：S2/S3；I5 和 AMASS 特征/监督接口冻结。若选原项目式控制蒸馏，必须有机器人参考、环境状态及教师动作来源；若选人体重建，须明确人体特征和输出头，不能直接套用当前 G1 的 524→29 接口。两者尚未选择，本轮不据原项目有教师就自动授权教师训练。
 - **Done when / Check**：在 Admittance 根目录运行 `uv run pytest tests/training/test_anybody_appo.py tests/scripts/test_anybody_appo.py -q`。同权重下采集/更新均值与 log-prob 一致，E/D 的实际参数变化符合冻结设置，权重同步含模型 buffer。
 - **Stop**：相同输入在两条路径含义不同、错误参数被更新、或既有扩展接口不足；回到总体规划说明具体限制，不自行创建外部 fork 或扩写整套 runner。
 
@@ -192,73 +202,76 @@ S2 验收结果（2026-10-15，CPU）：
 | 目标仓库确定 | 用户选择 / E2 | 已确认 | human-confirmed |
 | 新版职责与依赖检查 | Admittance + published uni_rl / E1 | 已检查 | code-confirmed |
 | 总体路线及逐步工程包 | 本看板 / E3 | 已记录为 proposal | note-confirmed |
-| S1 接口冻结 | ANYBODY-IO-v1 / E5–E8 | 已完成；I5 经用户决定延后 | code-confirmed + document-confirmed |
+| S1 接口冻结 | ANYBODY-IO-v1 / E5–E8 | G1 基线已完成；AMASS 入口不受其维度绑定 | code-confirmed + document-confirmed |
 | S2 纯网络验收 | Admittance 内本节 S2 验收结果 | 已完成；39 项网络检查通过；全仓 gate 缺依赖 | network-test-confirmed |
-| S3–S6 实现与验收 | 各工程包的 Done when | 未开始 | unconfirmed |
+| S3 原项目核查 | E10 的版本固定源码链路 | 已完成；发现原项目无 raw AMASS reader | code-confirmed |
+| S3 数据层 | E11；384 份文件的哈希/读取和批次证据 | 已完成；当前子集/packed poses 格式 | data-runtime-confirmed |
+| S4–S6 | 各工程包的 Done when | 未开始；用户要求远程训练 | unconfirmed |
 
-## 证据追加区
+## 证据记录
 
-### E1 — 2026-10-15：基线源码与包边界
+### E11 — 2026-10-15：S3 数据实现及项目内真实子集验收
 
-- 方法：在目标根目录运行 `git rev-parse HEAD`、`git remote -v`、`git status --short`；读取 `AGENTS.md`、`pyproject.toml`、`uv.lock`、训练入口、观测 manager、motion loader、playback、相关 ADR 和历史迁移笔记。
-- 观测：目标 HEAD 为 `70afeb9ac9708ec1320e3d62bdc7923d73abf957`；初始工作树干净；当前没有仓内 `src/unilab/algos/torch/appo`。此前针对旧仓的路径不适用。
-- 包读取：下载 `uv.lock` 指定的 `unilab_rl-1.0.0.tar.gz` 到 `/private/tmp/unilab_rl_feasibility_1.0.0.tar.gz`，执行 `shasum -a 256` 并展开只读检查；结果 `b2ab788a99054b2a75183b08c76c9cb5e70af5a6ed749316106a082ded9fbe16` 与锁文件一致。
-- 观测：实际发布包保留 `.mlp` 更新调用、可配置 actor class 和 runtime resolver；collector 缓存动作并直接传给环境。Admittance 入口通过可 pickle 的 registry env factory 注入环境。
-- 等级：code-confirmed。未安装依赖、未导入运行包、未执行模型或仿真测试；历史 AMP 已运行的记录不能证明当前锁定包包含该扩展。
-- 检查异常：初次沿用旧路径的 `sed/rg` 返回文件不存在；随后根据当前树重新定位 `src/unilab/scripts/`、`src/unilab/conf/`、`tasks/` 和外部包，未据旧路径制定修改。
+以下是此前验收记录；当前数据存放和交付要求已由 E12 更新。本地原始数据与逐文件清单现已不存在，不将本节当作当前文件清单。
 
-### E2 — 2026-10-15：用户确认目标
+- 用户新增要求：自行联网获取适当规模数据并放进项目，供后续训练；明确本地不训练，后续走远程 SSH。本轮没有优化器更新、训练 rollout、网络结构修改、Git 提交/推送或 SSH 操作。
+- 实现：`load_amass_clip` / `AmassClip` 读取 packed poses 原始 NPZ，保留 poses/trans/betas/gender、DMPL、fps、源字段及显式模型声明；无声明保持 unknown，不按 156 维推断。支持两种 fps 键并拒绝冲突。`AmassWindowDataset` 提供 clip 内完整窗口和可复制批次，保留每个样本的时间/文件/帧位置；不同人体参数布局不可混用。`split_amass_files(..., groups=...)` 允许可靠身份分组，避免先切窗再随机划分的泄漏。
+- 数据：公开第三方镜像 [realdream-ai/AMASS](https://huggingface.co/datasets/realdream-ai/AMASS/tree/d38490c0e60dcefae81461fc5f4765fe66727831/raw/CMU)，revision `d38490c0e60dcefae81461fc5f4765fe66727831`。下载 384 条 / 99 个 CMU subjects / 513,624,784 bytes（489.83 MiB）/ 384,010 帧，按帧数/fps 约 61.92 分钟；307 条 120 Hz、77 条 60 Hz。每个文件与源 LFS SHA256/size 对照，并由本轮主实现重新读取、重算 SHA256 验证；零失败。原始人体参数和数据模型权重是两回事，本轮未获取 SMPL 权重。
+- 可复用划分：seed `20261015`，先按明确 CMU subject 分为 89/10 人，再按 64 帧、stride=16 示例过滤 2 条 20/21 帧短动作。训练 351 条 / 21,017 窗口，验证 31 条 / 1,659 窗口；受试者与 clip 均不重叠。两条短原文件保留，exclusions 写入 splits。64/16 是数据验证设置，不是 S4 已确定的训练超参数。
+- 真实数据检查：所有 382 条可用 clip 的首/尾窗口身份、边界、fps 和有限值通过；训练/验证均用 DataLoader 取 batch，poses `[16,64,156]`、trans `[16,64,3]`、DMPL `[16,64,8]`。另对真实 60/120 Hz 各一条构建混合 batch，逐值核对原始 frame_times，未默认重采样或 float32 转换。
+- 聚焦测试命令（cwd=Admittance）：`PYTHONPATH=src UV_CACHE_DIR=/private/tmp/anybody-s3-uv-cache uv run --no-project --python /private/tmp/anybody-s3-venv/bin/python -- python -m pytest tests/data/test_amass.py tests/models/test_anybody_models.py tests/envs/test_motion_loader.py tests/managers/test_observation_partial_reset.py -q` → **108 passed in 1.16s**。包含字段/错误/时间/分组/可变帧率/默认 Torch 批次与序列化，以及已有网络、机器人 loader 和部分 reset 回归。首轮 92 项通过后补充受试者隔离，再执行此最终集合；没有以测试触发训练。
+- 静态质量：新 data 模块和测试的 Ruff lint/format、mypy、Pyright 均通过。全仓 `ruff check src tests` 和测试 F401/F821/F811/F841 检查通过；全仓 `mypy src/unilab` 为 157 个源码文件无问题。
+- 全仓限制：`ruff format --check src tests` 提示两个未改的 AMP 文件需格式化；没有自动格式化无关文件。`make -o format check` 在临时环境因缺 mypy 命令入口退出 2，随后通过同环境 `python -m mypy` 验证全仓。全仓 Pyright 为 3 errors / 12 warnings，错误位于未改的 `base/entity.py`（unisim sensor-history 接口）和 `scripts/train_appo.py`（外部 APPORuntime.runner_kwargs），当前依赖与仓库既有接口不一致；新 data 模块无错误。为遵守不在本地训练的要求，未跑含训练 smoke 的全量 pytest，不宣称完整 make/PR gate 通过。
+- 临时测试环境复用既有 Torch 2.7.0 / NumPy 2.4.4，并隔离安装锁定的外部 runtime；它不是已满足项目 Torch 下限的正式训练环境。正式远程训练依赖配置仍归 S4，本轮未改变 pyproject/uv.lock。
+- 当时交付状态：代码/测试、`.gitignore`、本协作看板、数据 README/manifest/splits 尚未提交；raw 当时位于项目并受 gitignore 保护。后续用户明确禁止本地保留/下载数据，当前交付按 E12 改为远程准备入口，不同步本地 raw。
+- 结论：S3 **数据层完成**；人体数据到网络特征、重建/控制标签及异步优化仍由 S4 决定，不声称策略已训练或机器人可执行。
 
-- 用户明确选择“当前 ADAPT/Admittance 仓库（推荐）”。旧 `unilab_stand` 不再作为实施目标。
-- 等级：human-confirmed；不等同于选择训练模式或授权长期训练。
+### E12 — 2026-10-15：改为远程准备数据，并交付用户 GitHub
 
-### E3 — 2026-10-15：规划落盘
+- 用户明确要求不在本地下载数据，并提交自己的 GitHub。检查时 `datasets/amass/` 已不存在；没有执行本轮原始数据删除或重新下载，未找到 manifest/splits 备份，不声称恢复原清单。
+- 新增 `unilab.data.amass_download.prepare_amass_subset`，由 `scripts/motion/download_amass.py` 仅负责 CLI 组装。固定 E11 的第三方源 revision；按 subject 轮选 384 条，单条不超过 4 MiB、总计不超过 512 MiB。下载逐份校验 SHA256/size，并调用已有 reader；已验证文件可跳过，损坏既有文件报错，失败清理 `.part`。远程生成 manifest 及 subject 隔离 splits，64/16 仍只是预览设置。
+- 最小工程包：仅数据 owner、CLI、相关测试和说明；保留 S2 网络/默认配置/外部训练器依赖。验收为模拟网络下来源选择、分页、哈希失败/清理、重跑跳过、受试者隔离；本地不调用真实原始动作下载。
+- 聚焦命令：`PYTHONPATH=src UV_CACHE_DIR=/private/tmp/anybody-s3-uv-cache uv run --no-project --python /private/tmp/anybody-s3-venv/bin/python -- python -m pytest tests/data tests/models/test_anybody_models.py tests/envs/test_motion_loader.py tests/managers/test_observation_partial_reset.py -q` → **116 passed in 1.14s**。新增下载测试只使用生成字节和模拟 HTTP；未运行优化器或训练 smoke。
+- 源接口单独读取公开文件列表元数据，确认分页、LFS `oid` 和大小字段；新规则选出 384 条 / 93 个 subjects / 534,899,312 bytes（510.12 MiB），未获取 NPZ。这是新准备规则的元数据结果，并非 E11 丢失清单的精确恢复；不把此检查记作服务器真实下载验收。新数据 owner 的 Ruff lint/format、mypy 和 Pyright 全部通过；全仓依赖/格式限制仍见 E11。
+- Git 交付目标仅为 `origin=https://github.com/Andisyc/Admittance` 的现有 `feat/anybody-muse-s2` 分支。原始数据不提交；无 SSH 信息，因此尚未在远程执行准备命令。下一步仍为 S4 特征/监督和远程运行规划，不自动开始训练。
 
-- 新增本看板，集中记录范围、六步路线、逐步工程包、状态及追加证据；没有替换本主题旧版本或修改历史笔记。
-- 等级：note-confirmed。所有新增模型/测试/配置路径均为拟定，尚无实现或测试通过记录。
-- 文档检查记录见 E4；不能将此条作为运行验收证据。
+### E10 — 2026-10-15：AMASS 目标纠正与原项目链路核查
 
-### E4 — 2026-10-15：文档验证
+- 此历史核查回合只读取固定版本 `hazel-hammer/Anybody@0cffa139eab0bc145c9216223e249f03c67a324c` 并更新看板，当时未改生产代码或运行训练。之后的 S3 数据实现与当前状态以 E11 为准。
+- 原项目链路：**人体动作经外部重定向 → 机器人 CSV → 机器人 NPZ → 仿真参考/机器人观测 → 教师动作监督 → Encoder/Decoder 学生控制策略**。README 的公开 recipe 使用 Bones Studio 数据；所选启动脚本的默认目录是 `SONIC_npzs/g1/npz_by_motion/train`。二者均不能证明当前版本提供原始 AMASS 解析或 AMASS 人体重建训练。
 
-- `git diff --no-index --check /dev/null note/anybody/task_canvas.md`：诊断输出为空；原始退出码 1 表示新增文件有差异，不能误记为命令退出码 0。后续用显式检查“诊断为空且原始退出码不大于 1”的文档检查确认，无空白错误。
-- 逐项 `test -f` 检查 13 个既有 owner/引用路径：全部存在；S1–S6 工程包均包含范围、依赖、完成条件和停止条件。拟新增文件已明确标注，不充当既有路径证据。
-- 初次路径检查采用 zsh 特殊变量 `path` 作循环变量，13 项存在性检查通过后，末尾 `git` 因 PATH 被改变返回 127；该子 shell 结束后已改用普通变量 `owner_file` 重跑，13 项及 git 状态读取均通过。组合命令尾部的 no-index diff 返回 1，含义如上。失败未覆盖，未修改系统或仓库环境配置。
-- `git status --short`：只有本主题新增 `note/anybody/`；tracked 生产代码 diff 为空。
-- 等级：document-confirmed。模型测试、仿真、异步训练、保存/恢复、导出均未执行。
+| 核查对象 | 源码事实及证据 | 对本项目的影响 |
+| --- | --- | --- |
+| 数据说明 | [README 数据准备](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/README.md#data-preparation) 明确先重定向，再转换 CSV 为 NPZ；训练步骤先教师后学生 | 原始 AMASS 读取不能假定已包含在待移植模块中 |
+| CSV 转换 | [csv_to_npz.py](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/scripts/csv_to_npz.py#L181) 使用机器人关节名，写入机器人状态后导出 joint/body 数组；[motion_csv_loader.py](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/scripts/motion_csv_loader.py#L20) 输入已含 root 和机器人 DOF | CSV→NPZ 是导出/重采样，不是 raw AMASS→G1 的重定向算法；脚本写状态不运行物理积分，不证明轨迹动力学可行 |
+| 运行时数据 | [commands.py 的 MotionLoader](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/source/whole_body_tracking/whole_body_tracking/tasks/tracking/mdp/commands.py#L391) 与 MultiMotionLoader 读取 fps、joint_pos/joint_vel、body_pos/quat/lin_vel/ang_vel_w | 读取的是预处理后的机器人轨迹；这些字段不等于 AMASS 人体参数 |
+| 模型输入 | [MUSETransformerDistillationTrackingEnvCfg](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/source/whole_body_tracking/whole_body_tracking/tasks/tracking/tracking_env_cfg.py#L970) 组合参考误差、实际机器人状态、5 帧历史和 last_action | 原始 AMASS 文件本身不提供机器人实际状态和控制历史；不能直接送入当前 524 维输入 |
+| 训练监督 | [muse_distillation.py 的 act/update](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/source/rsl_rl/rsl_rl/algorithms/muse_distillation.py#L235) 在线收集教师动作，在第 288 行计算学生动作与教师动作的行为损失；[启动脚本](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/run/train/MUSE/run_muse_transformer_distillation.sh#L29) 传入 motion 与 teacher_checkpoint | 原项目的 Encoder/Decoder 是控制策略蒸馏，不是人体姿态重建自编码器。本项目是否复用此监督仍待 S4 决定 |
+| 名称相似的离线 reader | [motion_data_loader.py](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/source/whole_body_tracking/whole_body_tracking/utils/motion_data_loader.py#L148) 返回 305 维输入及 3 维参考 anchor 速度；消费者是 [train_ref_vel_estimator.py](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/scripts/train_ref_vel_estimator.py#L296) | 它是参考速度估计器的数据工具，不是 MUSE 或 AMASS 训练 reader。其拼接各文件、过滤帧后统一切窗口的逻辑也不能直接作为新 reader 的序列采样实现 |
+| SMPL 分支 | `robots/smpl.py` 与 `config/humanoid/flat_env_cfg.py` 定义的是仿真 SMPL humanoid，并引用已导出的 walk.npz | 有 SMPL 仿真模型不等于已实现原始 AMASS 数据读取 |
 
-### E5 — 2026-10-15：S1 执行授权及训练范围收敛
+- 检索边界：对当前固定 checkout 执行 `git grep -n -i amass -- .` 无匹配；另外检索原始数据常见字段 `mocap_framerate`、`mocap_frame_rate`、`dmpls`、`betas`、`poses`/`trans` 读取形式，并逐项读取上述数据/模型/训练入口。未找到 raw AMASS parser 是本版本的源码检查结果，不是对其他分支或外部预处理工具的断言。[AMASS 官方说明](https://amass.is.tue.mpg.de/) 确认其发布人体模型参数，不能与机器人 joint/body NPZ 混同。
+- 当时缺口：未取得真实 AMASS 文件，且网络输入输出/监督尚未定义为人体预训练接口。样本缺口现已由 E11 的真实子集解决；网络/监督接口仍归 S4。已有 G1 轨迹和 donor fixture 不作为 AMASS 数据证据。
+- 文档核验：通过标准库 AST 检查确认固定 donor 的机器人 NPZ 字段、教师动作监督和速度估计器消费者；验证 13 个版本固定源码/本地链接。`git diff --check` 通过，工作区只有本看板变化；没有把静态源码核查记成模型或数据运行测试。
+- 等级：code-confirmed / document-confirmed。该回合确定的下一实施包（AMASS 原始序列读取/采样）已在 E11 完成；没有据此自动选择人体重建、教师蒸馏或 latent RL。
 
-- 用户要求“开始执行第一步”，随后明确选择“先完成网络与观测接入，训练方式到 S4 再定”。
-- 因此更新 S1 完成条件：I5 的训练模式延后是用户已决定的范围，不再把选定 APPO/教师作为 S2/S3 的前置条件；S4 仍须明确训练目标、采样空间和可更新参数。
-- 等级：human-confirmed。没有借此授权 S2 编码、修改算法、启动教师训练或长期训练。
+### E1 — 基线源码与包边界
+- 初始 Admittance 为 `70afeb9ac9708ec1320e3d62bdc7923d73abf957`，工作树干净。锁定的 unilab-rl 1.0.0 sdist SHA-256 为 `b2ab788a99054b2a75183b08c76c9cb5e70af5a6ed749316106a082ded9fbe16`；已确认 runner/learner/collector 在外部包，环境由可 pickle 的 factory 注入。
 
-### E6 — 2026-10-15：模型与观测公式核对
+### E2 — 目标仓库
+- 用户选择当前 ADAPT/Admittance；旧 unilab_stand 仅作参考。用户后来再次纠正代码交付目标，S2 最终提交位于本仓 `52466db7`，误建个人训练包 fork 已由用户手动删除。
 
-- 只读 donor：`latent_bottleneck_muse_transformer.py` 的构造函数、`split_obs`、`encode`、`_shape_proprio_for_decoder`、`_decode`；`G1FlatMUSETransformerDistillationRunnerCfg`；`MUSETransformerDistillationTrackingEnvCfg`；observations 中 `delta_command_real`、`motion_anchor_ori_b`、`motion_anchor_pos_b`、`ref_base_lin_vel_b`。
-- 对照只读目标：`conf/appo/task/g1_motion_tracking/mujoco.yaml`、`MotionCommand` 公开状态属性、motion manager terms、`envs/mdp/observations.py`、`EntityData`、ObservationManager、CircularBuffer。结果是上方逐字段公式和 S3 缺口表，而非已接通的代码。
-- 已分清 absolute command 与 delta command、pelvis 与 torso 角速度、term-major 外部历史与 frame-major Decoder 历史、关节默认值 bias、raw action 与缩放动作。
-- 关键注释差异：donor `ref_base_lin_vel_b` 实际是 `quat_rotate_inverse(command.anchor_quat_w, command.anchor_lin_vel_w)`，使用参考 torso 坐标系；按实际代码记录，不按其 robot-base 注释猜测。
-- 官方来源：[IsaacLab v2.1.0 observations](https://github.com/isaac-sim/IsaacLab/blob/v2.1.0/source/isaaclab/isaaclab/envs/mdp/observations.py)、[ArticulationData](https://github.com/isaac-sim/IsaacLab/blob/v2.1.0/source/isaaclab/isaaclab/assets/articulation/articulation_data.py)。核对 `root_lin_vel_b/root_lin_vel_w` 后，已明确 donor pelvis COM 与目标 link 原点的差异；S1 选择目标公开 link 输入，不新增 backend COM 能力，不宣称 donor 观测/权重等价。
-- donor 主文件：[模型](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/source/rsl_rl/rsl_rl/modules/latent_bottleneck_muse_transformer.py)、[配置](https://github.com/hazel-hammer/Anybody/blob/0cffa139eab0bc145c9216223e249f03c67a324c/source/whole_body_tracking/whole_body_tracking/tasks/tracking/config/g1/agents/rsl_rl_ppo_cfg.py)。
-- 等级：code-confirmed。没有运行 Isaac/UniLab，没有验证数据集元数据或跨后端物理等价。
+### E3 / E4 — 看板与文档检查
+- 本文件是唯一当前协作入口。初版 owner/链接和空白检查通过；这些属于文档证据，不是模型、环境或训练验收。详细历史见 Git。
 
-### E7 — 2026-10-15：绑定可修改的训练源码 owner
+### E5 — 训练选择延后
+- 用户明确选择“先完成网络与观测接入，训练方式到 S4 再定”。后续明确 AMASS 是训练数据来源；没有据人体重建/机器人控制的解释讨论自动选择其中一条路线。
 
-- `git ls-remote https://github.com/unilabsim/unilab_rl.git refs/tags/v1.0.0 refs/tags/v1.0.0^{}`：tag 指向 `ce0050ecc77ec17de84b6b581148c67e1ae03caa`。
-- `git clone --branch v1.0.0 --depth 1 https://github.com/unilabsim/unilab_rl.git /Users/sss9999/enbodied_intelligence/ADAPT/unilab_rl`：成功；检出 tag 的 detached HEAD，仅作为版本固定的源码工作目录。未创建分支/commit，未安装依赖或改变 Admittance 的锁文件。
-- 已读取该仓 `AGENTS.md`：模型/算法 owner 在 `uni_rl.algos`，禁止反向依赖 UniLab/unisim，未来按该仓校验规则执行。
-- 在新源码根目录执行 `git rev-parse HEAD`、`git status --short` 及 `git diff --no-index --stat /private/tmp/unilab_rl_feasibility_1.0.0/unilab_rl-1.0.0/src/uni_rl src/uni_rl`：commit 如上，状态为空，`src/uni_rl` 对照无差异，组合命令退出码 0。
-- 等级：code-confirmed。源码存在不等于当前 Python 会导入它；S4 前仍需选择开发依赖绑定与版本交付方式。
+### E6 — G1 模型/观测语义
+- 对照 donor 模型、配置、观测函数与目标公开 entity/manager 接口，形成上方 ANYBODY-IO-v1。已分清参考/实际状态、pelvis/torso、term-major/frame-major、raw/scaled action，以及 donor COM 与目标 link 原点语义差异。该接口只证明 G1 基线的工程定义，不证明原始 AMASS 可直接作为输入。
 
-### E8 — 2026-10-15：静态参数与布局检查
+### E7 — 训练包源码参考
+- 为核查已克隆 unilab_rl tag v1.0.0，commit `ce0050ecc77ec17de84b6b581148c67e1ae03caa`，当时 src/uni_rl 与 sdist 无差异。该目录当前仅作参考；自定义代码和交付归 Admittance，不再作为另一开发仓库。
 
-- 执行方式：`UV_CACHE_DIR=/private/tmp/anybody-s1-uv-cache uv run --no-project --no-sync --python /opt/homebrew/Caskroom/miniforge/base/bin/python3 -`，通过 stdin 输入纯标准库脚本；用 `ast.parse` 读取 donor 配置类的 policy 构造参数，以 `ast.literal_eval` 提取常量，未 import donor/UniLab/Torch。
-- 检查：`sum(goal_term_sizes)=73`、`sum(proprio_term_sizes)=90`、`H*P=450`、总输入 524、Decoder 输入 466；逐项累加 ANYBODY-IO-v1 十个字段区间，末端恰为 524。实际输出 `Static config/layout check: PASS; no model or simulator imported.`，退出码 0。
-- uv 提示 `--no-sync` 在 `--no-project` 下无效；未发生项目依赖同步，使用的是显式指定的既有解释器。
-- 等级：static-check-confirmed。这里只验证配置常量和切片算术；不是模型数值、梯度、历史运行或训练验收。S2–S6 仍未开始。
-
-### E9 — 2026-10-15：S1 看板一致性检查
-
-- 用同一既有解释器经 `uv run --no-project` 执行标准库检查：Markdown 的 4 个本地链接存在；S1 状态为 1/6，S2–S6 行仍为“未开始”；E1–E8 编号各出现一次；新源码目录尚无 `uni_rl.algos.anybody` 实现；两个仓库均无 tracked 生产代码差异。
-- 文档空白检查使用 `git diff --no-index --check /dev/null note/anybody/task_canvas.md`，接受新增文件的原始状态码 1，但要求诊断为空。全部检查通过，脚本退出码 0。
-- 等级：document-confirmed。S1 完成限定为接口、源码及文档验收；S2 模型数值/梯度、S3 真实观测、S4 异步更新均未运行。
+### E8 / E9 — S1 静态验收
+- 通过 donor 配置 AST 和布局算术检查：goal=73、每帧 proprio=90、H=5、obs=524、Decoder 输入=466；链接及看板状态检查通过。S2 的后续 39 项网络测试及依赖限制见 S2 节，不能将早期静态验收当作 AMASS 或运行时验收。
