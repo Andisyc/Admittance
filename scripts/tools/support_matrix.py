@@ -24,6 +24,10 @@ BACKENDS: tuple[str, ...] = (
     "newton",
 )
 
+# These new policy paths have offline contracts, but no collector/physics
+# acceptance yet. Generic APPO coverage must not promote them to Tested.
+_PENDING_RUNTIME_ENTRYPOINT_TASKS = frozenset({("appo_torch", "anybody_g1")})
+
 # Maintainer-confirmed completed training validations. Keep this mapping narrow:
 # generic config/contract coverage must not promote an unvalidated entrypoint.
 _MAINTAINER_VALIDATED_MJWARP_ENTRYPOINT_TASKS = frozenset(
@@ -249,6 +253,8 @@ def _configured_entries(root: Path, spec: EntrypointSpec) -> dict[str, dict[str,
 
 
 def _is_tested(spec: EntrypointSpec, task_slug: str, backend: str, root: Path) -> bool:
+    if (spec.entrypoint_id, task_slug) in _PENDING_RUNTIME_ENTRYPOINT_TASKS:
+        return False
     if backend == "mjwarp":
         return (
             spec.entrypoint_id,

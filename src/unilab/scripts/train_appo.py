@@ -276,7 +276,7 @@ def play_appo(
     assert actor is not None
 
     # Export actor to ONNX
-    if load_path_dir is not None:
+    if load_path_dir is not None and getattr(cfg.training, "export_policy", True):
         import torch.nn as nn
 
         class _DeterministicAPPOActor(nn.Module):

@@ -22,6 +22,7 @@ orphan: true
 | [ADR-0006 Community Manager API On NumPy Runtime](ADR-0006-community-manager-api-on-numpy-runtime.md) | Manager API / NumPy runtime | Accepted |
 | [ADR-0007 UniSim Extraction Boundary](ADR-0007-unisim-extraction-boundary.md) | Physics package extraction | Accepted |
 | [ADR-0008 In-tree Training Runtime](ADR-0008-in-tree-training-runtime.md) | In-repository training ownership | Accepted |
+| [ADR-0009 Anybody Direct RL](ADR-0009-anybody-direct-rl.md) | Encoder–Decoder / offline motion boundary | Accepted for implementation |
 
 ## ADR Governance
 

@@ -1,6 +1,6 @@
 # Anybody Encoder–Decoder 接入看板
 
-更新日期：2026-10-16（Asia/Shanghai）。本文件保留技术接口、工程包及历史证据；唯一当前协作状态入口为 [collaboration/overview.md](../../collaboration/overview.md)，本次同步记录见其最新交接。
+更新日期：2026-10-17（Asia/Shanghai）。本文件保留 S1–S3 技术接口、工程包及历史证据；唯一当前状态入口为 [collaboration/overview.md](../../collaboration/overview.md)。**以下旧“训练方式待选”“S4 未开始”和禁止单段本地验证的表述是历史记录，已由用户最新授权及 [ADR-0009](../../docs/sphinx/source/adr/ADR-0009-anybody-direct-rl.md) 替代：当前实现 Encoder–Decoder 直接 RL，停在远端短训练验收前。**不据旧文字重新选择 Teacher 或回退外部训练包。
 
 ## 当前游标与授权
 
