@@ -70,7 +70,9 @@ jobs:
   deploy:
     name: Deploy to UniLab-doc gh-pages
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # The old unilabsim/UniLab URL redirects to Motphys/UniLab. Downstream
+    # repositories build docs but must not publish to the upstream website.
+    if: github.repository == 'Motphys/UniLab' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
