@@ -1,7 +1,7 @@
 # APPO
 
 APPO is UniLab's asynchronous PPO path. It uses `src/unilab/scripts/train_appo.py`,
-`src/unilab/conf/appo/config.yaml`, and the runtime under `uni_rl.algos.appo` (unilab-rl repo).
+`src/unilab/conf/appo/config.yaml`, and the runtime under `unilab.rl.algos.appo` (this repository).
 The config exposes `algo.steps_per_env`, `training.collector_device`, and
 `training.replay_queue_size`; the algorithm config includes V-trace clipping
 fields.
@@ -34,7 +34,7 @@ uv run eval --algo appo --task go2_joystick_flat --sim mujoco --load-run -1
 - Rollouts are published into a replay queue that the learner consumes.
 - APPO applies a V-trace importance-sampling correction, so its update
   semantics differ from synchronous PPO.
-- The collector/learner pipeline is backed by a 4-slot ring buffer.
+- The collector/learner pipeline uses a 4-slot single-producer/single-consumer ring. A full ring pauses the collector until the learner finishes copying and releases a slot; an in-use rollout is never overwritten.
 
 Per-iteration timing sequence (field meanings on the [logging page](../1-training/3-logging.md)):
 
@@ -63,7 +63,7 @@ gantt
     perf/iter_ms (learner loop only)      :        l5, 12000, 30000
 ```
 
-> The axis is schematic (relative, not real-ms). The collector subprocess produces rollouts through the 4-slot ring buffer in parallel with the learner, so **Collector Wait ≈ 0** in steady state. `perf/iter_ms` counts only this learner loop (it includes Collector Wait but not the collector's parallel rollout compute); the red Weight Publish marks the end of the iteration when fresh weights are published to the collector. Field meanings are on the [logging page](../1-training/3-logging.md).
+> The axis is schematic (relative, not real-ms). Collector and learner work in parallel through the 4-slot ring; wait time depends on their relative rates and queue occupancy. `perf/iter_ms` counts only this learner loop (it includes Collector Wait but not the collector's parallel rollout compute); the red Weight Publish marks the end of the iteration when fresh weights are published to the collector. Field meanings are on the [logging page](../1-training/3-logging.md).
 
 ## Key Fields
 

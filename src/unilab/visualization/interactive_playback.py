@@ -365,7 +365,7 @@ class OffPolicyPlaybackSession:
             return None
         if self.action_mode != "policy" or self.actor is None:
             return None
-        from uni_rl.utils.observations import split_obs_dict
+        from unilab.rl.utils.observations import split_obs_dict
 
         actor_obs_np, critic_np = split_obs_dict(obs_dict)
         priv_info = self.priv_info_resolver(
@@ -677,7 +677,8 @@ def _build_appo_actor(
 
     from rsl_rl.utils import resolve_callable
     from tensordict import TensorDict
-    from uni_rl.utils.observations import get_obs_dims
+
+    from unilab.rl.utils.observations import get_obs_dims
 
     action_shape = env.action_space.shape
     if action_shape is None:
@@ -686,13 +687,12 @@ def _build_appo_actor(
     rl_cfg_dict = deepcopy(rl_cfg)
 
     if is_hora:
-        from uni_rl.algos.hora.models import build_hora_shared_actor_critic
-        from uni_rl.algos.hora.rsl_rl_compat import (
+        from unilab.rl.algos.hora.models import build_hora_shared_actor_critic
+        from unilab.rl.algos.hora.rsl_rl_compat import (
             convert_config_v3_to_v4,
             is_rsl_rl_v4,
             is_rsl_rl_v5,
         )
-
         from unilab.scripts.play_hora_appo import _update_hora_obs_groups
 
         obs_td = wrapped_env.get_observations()
@@ -786,13 +786,13 @@ def create_appo_playback_session(
     if env is None:
         raise RuntimeError("Playback env factory did not return an environment.")
 
-    from uni_rl.algos.hora.runtime import is_hora_appo_runtime
+    from unilab.rl.algos.hora.runtime import is_hora_appo_runtime
 
     is_hora = is_hora_appo_runtime(rl_cfg)
     selected_wrapper_cls = wrapper_cls
     policy_obs_mode = playback_cfg.policy_obs_mode
     if is_hora:
-        from uni_rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
+        from unilab.rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
 
         selected_wrapper_cls = HoraRslRlVecEnvWrapper
         policy_obs_mode = "actor"
@@ -825,8 +825,7 @@ def create_appo_playback_session(
             )
             checkpoint = torch.load(checkpoint_path, map_location=device_name, weights_only=True)
             if rl_cfg.get("runtime_impl") == "amp_appo":
-                from uni_rl.algos.amp.checkpoint import extract_amp_actor_state
-
+                from unilab.rl.algos.amp.checkpoint import extract_amp_actor_state
                 from unilab.scripts.amp_appo import build_amp_playback_identity
 
                 actor_state = extract_amp_actor_state(
@@ -893,14 +892,14 @@ def resolve_play_obs_dim(obs_groups_spec: dict[str, int]) -> int:
 
 
 def resolve_play_obs_dims(obs_groups_spec: dict[str, int]) -> tuple[int, int]:
-    from uni_rl.utils.observations import get_obs_dims
+    from unilab.rl.utils.observations import get_obs_dims
 
     obs_dim, critic_obs_dim = get_obs_dims(obs_groups_spec)
     return int(obs_dim), int(critic_obs_dim)
 
 
 def extract_play_obs(obs_dict):
-    from uni_rl.utils.observations import split_obs_dict
+    from unilab.rl.utils.observations import split_obs_dict
 
     obs_out, _ = split_obs_dict(obs_dict)
     return obs_out
@@ -917,7 +916,7 @@ def resolve_play_actor_spec(
     if algo_name != "sac":
         return algo_name, {}
 
-    from uni_rl.offpolicy.runtime import resolve_custom_offpolicy_runtime
+    from unilab.rl.offpolicy.runtime import resolve_custom_offpolicy_runtime
 
     rl_cfg = cast(dict[str, Any], OmegaConf.to_container(cfg.algo, resolve=True))
     custom_runtime = resolve_custom_offpolicy_runtime(rl_cfg)
@@ -943,7 +942,8 @@ def build_play_actor(
 ) -> tuple[Any, Any | None, str, dict[str, Any]]:
     """Build the policy actor selected by an off-policy owner config."""
     import torch
-    from uni_rl.algos.common.actor_factory import build_actor
+
+    from unilab.rl.algos.common.actor_factory import build_actor
 
     actor_algo_type, actor_kwargs = resolve_play_actor_spec(
         algo_name,
@@ -963,7 +963,7 @@ def build_play_actor(
             **actor_kwargs,
         )
     elif algo_name == "td3":
-        from uni_rl.algos.fast_td3.learner import EmpiricalNormalization, TD3Actor
+        from unilab.rl.algos.fast_td3.learner import EmpiricalNormalization, TD3Actor
 
         actor = TD3Actor(
             obs_dim,
@@ -990,7 +990,7 @@ def build_play_actor(
             actor_noise_zeta_max=cfg.algo.algo_params.actor_noise_zeta_max,
         )
         if cfg.algo.obs_normalization:
-            from uni_rl.algos.common.normalization import EmpiricalNormalization
+            from unilab.rl.algos.common.normalization import EmpiricalNormalization
 
             normalizer = EmpiricalNormalization(shape=obs_dim, device=device)
     else:
@@ -1074,9 +1074,8 @@ def create_sac_playback_session(
 
     import os
 
-    from uni_rl.algos.common.actor_factory import build_actor
-    from uni_rl.offpolicy.worker import resolve_offpolicy_actor_priv_info
-
+    from unilab.rl.algos.common.actor_factory import build_actor
+    from unilab.rl.offpolicy.worker import resolve_offpolicy_actor_priv_info
     from unilab.utils.checkpoint import resolve_offpolicy_checkpoint_path
 
     device_name = default_device(torch, str(device) if device is not None else None)
@@ -1108,7 +1107,7 @@ def create_sac_playback_session(
     checkpoint_path: str | None = None
     normalizer = None
     if bool(getattr(cfg.algo, "obs_normalization", False)):
-        from uni_rl.algos.common.normalization import EmpiricalNormalization
+        from unilab.rl.algos.common.normalization import EmpiricalNormalization
 
         normalizer = EmpiricalNormalization(shape=obs_dim, device=device_name)
     if playback_cfg.action_mode == "policy":
@@ -1250,15 +1249,14 @@ def create_distill_playback_session(
 
 
 def _default_hora_distill_playback_deps(root_dir: str | Path) -> dict[str, Any]:
-    from uni_rl.algos.hora.distill import (
+    from unilab.base.config_adapter import BackendAdapter, create_env
+    from unilab.rl.algos.hora.distill import (
         build_student_actor_and_normalizer,
         cfg_with_checkpoint_runtime,
         load_distilled_checkpoint,
         student_policy,
     )
-    from uni_rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
-
-    from unilab.base.config_adapter import BackendAdapter, create_env
+    from unilab.rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
     from unilab.training import (
         format_hora_stage2_checkpoint_error,
         get_log_root,
@@ -1338,7 +1336,7 @@ def create_hora_distill_playback_session(
                     f"Checkpoint at {load_path} is not a HORA distillation checkpoint "
                     f"(found keys: {set(checkpoint.keys())})."
                 )
-            # uni_rl's cfg_with_checkpoint_runtime no longer composes teacher
+            # unilab.rl's cfg_with_checkpoint_runtime no longer composes teacher
             # defaults; the caller owns that composition (issue #1480).
             runtime_cfg = resolved_deps["cfg_with_checkpoint_runtime"](
                 resolved_deps["apply_teacher_defaults"](cfg), checkpoint

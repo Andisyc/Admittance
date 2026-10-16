@@ -16,11 +16,11 @@
 - 每个 task×backend 组合对应一个 owner YAML：
   `src/unilab/conf/<algo>/task/<task>/<backend>.yaml`；
 - 替换策略 / 算法实现类可以走 owner YAML 中的 `class_name` dotted path
-  （现网实例：`uni_rl.algos.hora:HoraActorModel`），无需新增代码路径。
+  （现网实例：`unilab.rl.algos.hora:HoraActorModel`），无需新增代码路径。
 
 ### 2. `runtime_resolver`：算法代码放在自己的仓库
 
-研究者在自己的仓库里 import `uni_rl`（distribution 名 `unilab-rl`）作为库，
+研究者在自己的仓库里 import `unilab.rl`（distribution 名 `unilab`）作为库，
 实现 runner / learner / play 逻辑，**不需要 fork unilab_rl**。owner YAML
 通过 `algo.runtime_resolver` 声明一个 dotted path（`module:attr`）：
 
@@ -35,19 +35,19 @@ algo:
   默认 runtime；
 - 返回对象必须携带 `runner_cls`；按算法族可选携带 `play_fn`（APPO 风格）
   或 `wrapper_cls`（PPO 风格）；
-- 解析发生在 uni_rl 侧（`uni_rl.algos.appo.runtime` /
-  `uni_rl.algos.rsl_rl_runtime`），dotted path 可以指向任何可 import 的模块。
+- 解析发生在 unilab.rl 侧（`unilab.rl.algos.appo.runtime` /
+  `unilab.rl.algos.rsl_rl_runtime`），dotted path 可以指向任何可 import 的模块。
 
 仓库内实例：`src/unilab/conf/appo/task/sharpa_inhand/mujoco_hora.yaml` 指向
 `unilab.scripts.play_hora_appo:resolve_hora_appo_runtime`；HORA 的 SAC / PPO
-变体分别指向 `uni_rl.algos.hora.sac:resolve_hora_sac_runtime` 与
-`uni_rl.algos.hora.rsl_rl:resolve_hora_ppo_runtime`。
+变体分别指向 `unilab.rl.algos.hora.sac:resolve_hora_sac_runtime` 与
+`unilab.rl.algos.hora.rsl_rl:resolve_hora_ppo_runtime`。
 
-### 3. fork unilab_rl：改 `uni_rl/algos/`
+### 3. fork unilab_rl：改 `unilab.rl/algos/`
 
 只有当需要改动 runner / learner / collector 的共享实现（例如新的 IPC
 生命周期）时，才 fork [unilabsim/unilab_rl](https://github.com/unilabsim/unilab_rl)
-并修改 `uni_rl/algos/`。异步算法应复用 `AsyncRunner`、`ReplayBuffer` /
+并修改 `unilab.rl/algos/`。异步算法应复用 `AsyncRunner`、`ReplayBuffer` /
 `RolloutRingBuffer` 与 `SharedWeightSync`，而不是新建一套 IPC 生命周期。
 
 ## CLI 可路由算法的 footprint
@@ -95,4 +95,4 @@ fail-closed，报错信息列出全部可用 algo（内置 + 约定发现的）�
 - 训练辅助工具：`src/unilab/training/common.py`、
   `src/unilab/training/run.py`
 - 现有算法包：[unilabsim/unilab_rl](https://github.com/unilabsim/unilab_rl)
-  的 `uni_rl`
+  的 `unilab.rl`

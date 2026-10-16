@@ -10,22 +10,22 @@ from typing import Any, Literal, cast
 import hydra
 import torch
 from omegaconf import DictConfig, OmegaConf
-from uni_rl.algos.distill.checkpoint import (
+
+from unilab.base.registry import ensure_registries
+from unilab.rl.algos.distill.checkpoint import (
     load_distillation_checkpoint,
     save_distillation_checkpoint,
 )
-from uni_rl.algos.distill.collector import DistillationCollectorSpec
-from uni_rl.algos.distill.persistent_runtime import PersistentDistillationRuntime
-from uni_rl.algos.distill.persistent_service import SingleTeacherDaggerService
-from uni_rl.algos.distill.teacher import SACTeacherSpec
-from uni_rl.algos.distill.trainer import BehaviorDistillationTrainer
-from uni_rl.algos.distill.workflow import (
+from unilab.rl.algos.distill.collector import DistillationCollectorSpec
+from unilab.rl.algos.distill.persistent_runtime import PersistentDistillationRuntime
+from unilab.rl.algos.distill.persistent_service import SingleTeacherDaggerService
+from unilab.rl.algos.distill.teacher import SACTeacherSpec
+from unilab.rl.algos.distill.trainer import BehaviorDistillationTrainer
+from unilab.rl.algos.distill.workflow import (
     SingleScenarioDaggerConfig,
     SingleScenarioDaggerRunResult,
     run_single_scenario_dagger,
 )
-
-from unilab.base.registry import ensure_registries
 from unilab.scripts.g1_distill import (
     build_g1_distill_student,
     load_g1_distill_student,

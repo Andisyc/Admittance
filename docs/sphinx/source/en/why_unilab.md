@@ -68,10 +68,9 @@ ready.
 UniLab provides the task, environment, configuration, adapter, and experiment
 workflow for robot RL. Physics engines are supplied by
 [`unisim-core`](https://github.com/unilabsim/unisim); algorithms and asynchronous
-runner components are supplied by
-[`unilab-rl`](https://github.com/unilabsim/unilab_rl). This separation lets a
-robot-specific repository reuse task recipes without taking ownership of every
-physics engine or learner implementation.
+runner components are maintained in this checkout under `unilab.rl`. Task and
+environment construction remain separate from generic collectors and learners
+through an injected environment factory.
 
 UniLab is not a new universal physics engine, a guarantee of cross-backend
 numerical equivalence, or a promise that every platform supports every task.

@@ -18,11 +18,11 @@ Change no code — only adjust the Hydra config under `src/unilab/conf/<algo>/`:
   `src/unilab/conf/<algo>/task/<task>/<backend>.yaml`;
 - Swapping policy / algorithm implementation classes works through the
   `class_name` dotted path in the owner YAML (in-repo example:
-  `uni_rl.algos.hora:HoraActorModel`), with no new code path required.
+  `unilab.rl.algos.hora:HoraActorModel`), with no new code path required.
 
 ### 2. `runtime_resolver`: Algorithm Code In Your Own Repository
 
-A researcher imports `uni_rl` (distribution name `unilab-rl`) as a library in
+A researcher imports `unilab.rl` (distribution name `unilab`) as a library in
 their own repository and implements the runner / learner / play logic there —
 **no fork of unilab_rl needed**. The owner YAML declares a dotted path
 (`module:attr`) via `algo.runtime_resolver`:
@@ -39,21 +39,21 @@ Contract:
 - The returned object must carry `runner_cls`; depending on the algorithm
   family it may optionally carry `play_fn` (APPO style) or `wrapper_cls`
   (PPO style);
-- Resolution happens on the uni_rl side (`uni_rl.algos.appo.runtime` /
-  `uni_rl.algos.rsl_rl_runtime`); the dotted path may point at any importable
+- Resolution happens on the unilab.rl side (`unilab.rl.algos.appo.runtime` /
+  `unilab.rl.algos.rsl_rl_runtime`); the dotted path may point at any importable
   module.
 
 In-repo example: `src/unilab/conf/appo/task/sharpa_inhand/mujoco_hora.yaml`
 points at `unilab.scripts.play_hora_appo:resolve_hora_appo_runtime`; the HORA
-SAC / PPO variants point at `uni_rl.algos.hora.sac:resolve_hora_sac_runtime`
-and `uni_rl.algos.hora.rsl_rl:resolve_hora_ppo_runtime` respectively.
+SAC / PPO variants point at `unilab.rl.algos.hora.sac:resolve_hora_sac_runtime`
+and `unilab.rl.algos.hora.rsl_rl:resolve_hora_ppo_runtime` respectively.
 
-### 3. Fork unilab_rl: Modify `uni_rl/algos/`
+### 3. Fork unilab_rl: Modify `unilab.rl/algos/`
 
 Only when you need to change the shared runner / learner / collector
 implementation (for example a new IPC lifecycle) should you fork
 [unilabsim/unilab_rl](https://github.com/unilabsim/unilab_rl) and modify
-`uni_rl/algos/`. Async algorithms should reuse `AsyncRunner`, `ReplayBuffer` /
+`unilab.rl/algos/`. Async algorithms should reuse `AsyncRunner`, `ReplayBuffer` /
 `RolloutRingBuffer`, and `SharedWeightSync` instead of creating a new IPC
 lifecycle.
 
@@ -108,5 +108,5 @@ Notes:
 - Structured config dataclasses: `src/unilab/structured_configs.py`
 - Training helpers: `src/unilab/training/common.py`,
   `src/unilab/training/run.py`
-- Existing algorithm packages: `uni_rl` in
+- Existing algorithm packages: `unilab.rl` in
   [unilabsim/unilab_rl](https://github.com/unilabsim/unilab_rl)

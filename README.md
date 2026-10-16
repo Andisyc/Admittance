@@ -142,10 +142,11 @@ For development and contribution workflows, see the
 }
 ```
 
-UniLab is released under the [Apache License 2.0](LICENSE). See the
-independent [UniSim](https://github.com/unilabsim/unisim) and
-[UniLab RL](https://github.com/unilabsim/unilab_rl) repositories for their
-own release and citation information.
+UniLab is released under the [Apache License 2.0](LICENSE). Training algorithms,
+collectors and IPC are maintained here under `src/unilab/rl`. Physics remains
+provided by [UniSim](https://github.com/unilabsim/unisim). The initial generic
+training source came from [UniLab RL](https://github.com/unilabsim/unilab_rl);
+this checkout does not require its external distribution at runtime.
 
 ## Acknowledgments
 

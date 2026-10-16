@@ -12,7 +12,8 @@ import pytest
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
 from hydra.errors import ConfigCompositionException
-from uni_rl.ipc.dp_launcher import UNILAB_DP_LOG_DIR, UNILAB_DP_RANK, UNILAB_DP_WORLD_SIZE
+
+from unilab.rl.ipc.dp_launcher import UNILAB_DP_LOG_DIR, UNILAB_DP_RANK, UNILAB_DP_WORLD_SIZE
 
 _ROOT = Path(__file__).parent.parent.parent
 _CONF_DIR = _ROOT / "src" / "unilab" / "conf"
@@ -74,7 +75,7 @@ class _FakeRunner:
 
 
 def _fake_env_factory(num_envs, env_cfg_override):
-    """EnvFactory-shaped probe stub (uni_rl runners receive envs by injection)."""
+    """EnvFactory-shaped probe stub (unilab.rl runners receive envs by injection)."""
     del num_envs, env_cfg_override
     return _FakeEnv()
 
@@ -144,7 +145,7 @@ def test_non_cuda_training_devices_fail_before_env_materialization(
         env_calls += 1
         raise AssertionError("unsupported replay device must fail before env creation")
 
-    # The injected env_factory is the only env-construction seam uni_rl has.
+    # The injected env_factory is the only env-construction seam unilab.rl has.
     monkeypatch.setattr(module, "registry_env_factory", lambda *args, **kwargs: reject_factory)
     with pytest.raises(ValueError, match="training.devices entries"):
         module.build_runner(algo, cfg)
@@ -155,7 +156,7 @@ def test_sac_dispatch_constructs_unique_runner(monkeypatch: pytest.MonkeyPatch):
     module = _offpolicy()
     cfg = _offpolicy_cfg([])
 
-    import uni_rl.algos.fast_sac.double_buffer as owner_module
+    import unilab.rl.algos.fast_sac.double_buffer as owner_module
 
     monkeypatch.setattr(module, "registry_env_factory", lambda *args, **kwargs: _fake_env_factory)
     monkeypatch.setattr(owner_module, "FastSACLearner", _FakeLearner)
@@ -214,8 +215,8 @@ def test_sac_genesis_owner_raises_inference_request_timeout():
 def test_sac_owner_custom_runtime_can_override_base_learner_kwargs(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from uni_rl.algos.fast_sac import double_buffer as owner_module
-    from uni_rl.offpolicy.runtime import OffPolicyRuntime
+    from unilab.rl.algos.fast_sac import double_buffer as owner_module
+    from unilab.rl.offpolicy.runtime import OffPolicyRuntime
 
     cfg = _offpolicy_cfg([])
     custom_runtime = OffPolicyRuntime(
@@ -248,7 +249,7 @@ def test_td3_dispatch_constructs_unique_runner(monkeypatch: pytest.MonkeyPatch):
     module = _offpolicy()
     cfg = _offpolicy_cfg(algo="td3")
 
-    import uni_rl.algos.fast_td3.double_buffer as owner_module
+    import unilab.rl.algos.fast_td3.double_buffer as owner_module
 
     monkeypatch.setattr(owner_module, "get_env_dims", lambda *args, **kwargs: (4, 2, 6))
     monkeypatch.setattr(owner_module, "FastTD3Learner", _FakeLearner)
@@ -321,7 +322,7 @@ def test_flashsac_dispatch_constructs_unique_runner(monkeypatch: pytest.MonkeyPa
     module = _offpolicy()
     cfg = _offpolicy_cfg(algo="flashsac")
 
-    import uni_rl.algos.flash_sac.double_buffer as flash_module
+    import unilab.rl.algos.flash_sac.double_buffer as flash_module
 
     monkeypatch.setattr(module, "registry_env_factory", lambda *args, **kwargs: _fake_env_factory)
     monkeypatch.setattr(flash_module, "FlashSACLearner", _FakeLearner)
@@ -345,7 +346,7 @@ def test_flashsac_n_step_is_rejected():
 
 
 def _bare_runner():
-    from uni_rl.offpolicy.double_buffer_runner import DoubleBufferOffPolicyRunner
+    from unilab.rl.offpolicy.double_buffer_runner import DoubleBufferOffPolicyRunner
 
     return object.__new__(DoubleBufferOffPolicyRunner)
 
@@ -384,7 +385,7 @@ def _build_sac_runner_with_fakes(
             lambda backend, device: backend_binding_calls.append((str(backend), str(device))),
         )
 
-    import uni_rl.algos.fast_sac.double_buffer as owner_module
+    import unilab.rl.algos.fast_sac.double_buffer as owner_module
 
     monkeypatch.setattr(
         module, "registry_env_factory", lambda *args, **kwargs: fake_probe_env_factory

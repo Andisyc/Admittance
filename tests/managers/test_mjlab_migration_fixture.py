@@ -138,7 +138,7 @@ def test_mjlab_fixture_is_pinned_test_only_numpy_code() -> None:
         "from torch",
         "import mjlab",
         "from mjlab",
-        "uni_rl",
+        "unilab.rl",
         "unilab.training",
     ):
         assert forbidden not in executable

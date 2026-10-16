@@ -12,8 +12,6 @@ import hydra
 import torch
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.utils import resolve_callable
-from uni_rl.algos.appo.runtime import resolve_appo_runtime
-from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper
 from unisim.backend.base import log_playback_plan
 
 from unilab.base.config_adapter import (
@@ -26,6 +24,8 @@ from unilab.base.process_device import (
     configure_backend_process_device,
     pin_genesis_device_before_cuda_init,
 )
+from unilab.rl.algos.appo.runtime import resolve_appo_runtime
+from unilab.rl.algos.rsl_rl import RslRlVecEnvWrapper
 from unilab.training import (
     algo_config_dict,
     build_run_dir_name,

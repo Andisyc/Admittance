@@ -123,3 +123,8 @@ APPO_HARDWARE_TIMING_ANALYSIS.md
 /.codegraph/
 /.uv-cache/
 /.superpowers/
+
+# Downloaded AMASS training data; keep provenance/splits in git, not motion blobs.
+/datasets/amass/raw/
+/datasets/amass/archives/
+/datasets/amass/.cache/

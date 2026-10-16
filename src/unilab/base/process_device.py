@@ -26,7 +26,7 @@ BACKEND_ENV_DEVICE_FIELDS: dict[str, str] = {
 
 
 # Newton consumes an explicit ``cuda:N`` device string (``newton_device``)
-# instead of an integer id.  uni_rl's collector-side binder gate only knows
+# instead of an integer id.  unilab.rl's collector-side binder gate only knows
 # mjwarp, so the rank-local device must reach spawn collectors through the
 # env override rather than through process binding.
 BACKEND_ENV_DEVICE_STR_FIELDS: dict[str, str] = {
@@ -284,7 +284,7 @@ def bind_backend_process_device_for_backend(backend_type: str, resolved: str) ->
     """Bind one backend's process-global accelerator device.
 
     This top-level callable is intentionally backend-aware and lazy.  It can
-    be wrapped with :func:`functools.partial` and injected into uni_rl's
+    be wrapped with :func:`functools.partial` and injected into unilab.rl's
     spawn-based collectors while remaining pickleable by module reference.
     """
     backend = _normalize_backend(backend_type)
@@ -302,7 +302,7 @@ def bind_backend_process_device_for_backend(backend_type: str, resolved: str) ->
 def bind_backend_process_device(resolved: str) -> str | None:
     """Bind a resolved backend process device in the current process.
 
-    Top-level on purpose: uni_rl's off-policy collectors receive this as the
+    Top-level on purpose: unilab.rl's off-policy collectors receive this as the
     injected ``backend_device_binder`` and pickle it by reference into
     spawn-based subprocesses. The mjwarp import stays lazy so the binder is
     importable without the ``mjwarp`` extra installed.

@@ -1,6 +1,6 @@
 """Tests for registry bootstrap.
 
-The torch actor factory helpers moved to uni_rl (issue #1480);
+The torch actor factory helpers moved to unilab.rl (issue #1480);
 ``build_actor`` coverage lives in that repo's test suite.
 """
 

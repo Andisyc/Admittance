@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
-from uni_rl.algos.distill.teacher import SACTeacherSpec
 
 from unilab import cli
+from unilab.rl.algos.distill.teacher import SACTeacherSpec
 from unilab.scripts.g1_distill import (
     checkpoint_identity,
     load_identified_sac_teacher,

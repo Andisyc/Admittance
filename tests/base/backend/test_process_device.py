@@ -170,7 +170,7 @@ def test_non_gpu_backend_is_left_untouched() -> None:
 
 
 def test_newton_override_carries_cuda_device_string() -> None:
-    # uni_rl's collector binder gate only knows mjwarp, so newton's rank-local
+    # unilab.rl's collector binder gate only knows mjwarp, so newton's rank-local
     # device must reach spawn collectors as a ``cuda:N`` override string.
     owner_override: dict[str, object] = {"newton_device": None, "nested": {"keep": True}}
     routed = apply_backend_env_device_override(

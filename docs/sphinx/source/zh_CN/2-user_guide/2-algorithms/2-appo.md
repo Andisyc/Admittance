@@ -1,7 +1,7 @@
 # APPO
 
 APPO 是 UniLab 的异步 PPO 路径。它使用 `src/unilab/scripts/train_appo.py`、
-`src/unilab/conf/appo/config.yaml` 以及 `uni_rl.algos.appo` (unilab-rl repo) 下的运行时。该配置暴露
+`src/unilab/conf/appo/config.yaml` 以及 `unilab.rl.algos.appo` （本仓库） 下的运行时。该配置暴露
 了 `algo.steps_per_env`、`training.collector_device` 和
 `training.replay_queue_size`；算法配置中包含 V-trace 裁剪字段。
 
@@ -32,7 +32,7 @@ uv run eval --algo appo --task go2_joystick_flat --sim mujoco --load-run -1
 - collector 负责 CPU 仿真，learner 负责 GPU 训练。
 - rollout 会先进入 replay queue，再由 learner 消费。
 - APPO 内部带 V-trace importance-sampling 修正，更新语义不同于同步 PPO。
-- collector / learner 流水线由一个 4 槽 ring buffer 支撑。
+- collector / learner 流水线使用单生产者、单消费者的 4 槽 ring buffer。满环时 collector 等待 learner 完成复制并释放槽，不能覆盖正在使用的 rollout。
 
 单次迭代的计时时序（各指标含义见[日志页](../1-training/3-logging.md)）：
 
@@ -61,7 +61,7 @@ gantt
     perf/iter_ms（仅 learner 这圈）   :        l5, 12000, 30000
 ```
 
-> 横轴为示意相对时长（非真实 ms 比例）。collector 子进程经 4 槽 ring buffer 与 learner 并行产出 rollout，稳态下 **Collector Wait ≈ 0**。`perf/iter_ms` 仅计 learner 这一圈（含 Collector Wait，但不含 collector 的并行采集计算）；红色 Weight Publish 标志该轮迭代结束、向 collector 发布新权重。各字段含义见[日志页](../1-training/3-logging.md)。
+> 横轴为示意相对时长（非真实 ms 比例）。collector 与 learner 经 4 槽 ring buffer 并行工作，等待时长取决于两者速度及队列占用。`perf/iter_ms` 仅计 learner 这一圈（含 Collector Wait，但不含 collector 的并行采集计算）；红色 Weight Publish 标志该轮迭代结束、向 collector 发布新权重。各字段含义见[日志页](../1-training/3-logging.md)。
 
 ## 关键字段
 

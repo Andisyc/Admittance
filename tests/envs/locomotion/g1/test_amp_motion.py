@@ -100,7 +100,8 @@ def test_expert_manifest_identities_keep_amp_mjlab_default_and_offer_regait() ->
 def test_v017_manifest_is_separate_from_original_expert_set() -> None:
     baseline = json.loads(G1_AMP_EXPERT_MANIFESTS["amp_mjlab"].read_text())
     assert [entry["file"] for entry in baseline["motions"]] == [
-        "walk_forward_loop_002__A022.npz", "walk_forward_loop_002__A024.npz"
+        "walk_forward_loop_002__A022.npz",
+        "walk_forward_loop_002__A024.npz",
     ]
     path = G1_AMP_EXPERT_MANIFESTS["regait_v017_a022"]
     assert path.parent.name == "regait_v017_a022_313"

@@ -28,7 +28,7 @@ CPU physics env loop -> shared IPC buffer -> learner
 - SAC, TD3, and FlashSAC use one off-policy execution path: `ReplayBuffer`
   provides bounded host ingress, the complete ring lives on one CUDA/MPS
   learner device, and `SharedWeightSync` publishes actor weights.
-- `AsyncRunner` in `uni_rl.ipc.async_runner` (unilab-rl repo) owns collector process
+- `AsyncRunner` in `unilab.rl.ipc.async_runner` (this repository) owns collector process
   startup, stop signaling, and shared-resource cleanup.
 
 ## Boundary Rules
@@ -41,8 +41,8 @@ CPU physics env loop -> shared IPC buffer -> learner
 ## Evidence In Repo
 
 - PPO entrypoint: `src/unilab/scripts/train_rsl_rl.py`
-- APPO runner: `uni_rl.algos.appo.runner` (unilab-rl repo)
-- Off-policy runner: `uni_rl.offpolicy.double_buffer_runner` (unilab-rl repo)
-- IPC primitives: `uni_rl.ipc.async_runner` (unilab-rl repo),
-  `uni_rl.ipc.rollout_ring_buffer` (unilab-rl repo), `uni_rl.ipc.replay_buffer` (unilab-rl repo),
-  `uni_rl.ipc.weight_sync` (unilab-rl repo)
+- APPO runner: `unilab.rl.algos.appo.runner` (this repository)
+- Off-policy runner: `unilab.rl.offpolicy.double_buffer_runner` (this repository)
+- IPC primitives: `unilab.rl.ipc.async_runner` (this repository),
+  `unilab.rl.ipc.rollout_ring_buffer` (this repository), `unilab.rl.ipc.replay_buffer` (this repository),
+  `unilab.rl.ipc.weight_sync` (this repository)

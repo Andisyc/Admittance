@@ -1,8 +1,8 @@
-"""Picklable ``EnvFactory`` adapters bridging uni_rl's injected env contract
+"""Picklable ``EnvFactory`` adapters bridging unilab.rl's injected env contract
 to the UniLab env registry.
 
-uni_rl runners and collectors never construct environments themselves; the
-caller injects an ``EnvFactory`` (see ``uni_rl.env_contract``). Because
+unilab.rl runners and collectors never construct environments themselves; the
+caller injects an ``EnvFactory`` (see ``unilab.rl.env_contract``). Because
 collectors run in ``multiprocessing`` spawn subprocesses, the factory must be
 picklable by reference — the adapters below are module-level functions bound
 with ``functools.partial`` (never closures or lambdas).
@@ -14,9 +14,8 @@ from collections.abc import Mapping
 from functools import partial
 from typing import Any, cast
 
-from uni_rl.env_contract import EnvFactory, EnvProtocol
-
 from unilab.base.process_device import bind_genesis_process_device
+from unilab.rl.env_contract import EnvFactory, EnvProtocol
 
 
 def make_registry_env(
@@ -63,7 +62,7 @@ def make_registry_env(
                 "genesis_device_id": int(bound.rsplit(":", 1)[1]),
             }
     # ABEnv satisfies EnvProtocol at runtime (reset/set_nan_guard live on
-    # NpEnv); the declared ABEnv type predates the uni_rl protocol.
+    # NpEnv); the declared ABEnv type predates the unilab.rl protocol.
     return cast(
         "EnvProtocol",
         registry.make(

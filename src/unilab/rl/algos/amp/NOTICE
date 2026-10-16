@@ -1,0 +1,7 @@
+AMP learner/discriminator/normalizer/replay and transition pairing adapted from
+Andisyc/ReGait commit 06c12ee605795daa14817c9db7644ba75a453075,
+src/unilab/algos/torch/amp/{learner,transition,worker,runner}.py.
+Original source: https://github.com/Andisyc/ReGait
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+Changes: repository-local imports, injected expert arrays, generic APPO hooks,
+strict batch/terminal validation and versioned atomic checkpoint handling.

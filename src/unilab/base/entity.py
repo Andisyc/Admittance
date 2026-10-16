@@ -19,11 +19,10 @@ import numpy as np
 from unisim.backend.base import BackendRootStateLayout, BackendSensorView, SimBackend
 from unisim.dr.types import IntervalRandomizationPlan
 
+from unilab.base.sensor_history import SensorHistoryBackend, SensorHistoryView
 from unilab.utils.rotation import np_quat_apply, np_quat_apply_inverse, np_yaw_from_quat
 
 if TYPE_CHECKING:
-    from unisim.backend.base import BackendSensorHistoryView
-
     from unilab.base.reset_state import ResetStateTransaction
     from unilab.base.scene import SceneCfg
 
@@ -2330,14 +2329,20 @@ class EntityScene(Mapping[str, Entity]):
 
     def bind_sensor_history(
         self, names: Sequence[str], *, history_length: int
-    ) -> BackendSensorHistoryView:
+    ) -> SensorHistoryView:
         """Bind validated oldest-to-newest backend sensor history on the cold path."""
+        backend_type = self._backend.backend_type
+        if not isinstance(self._backend, SensorHistoryBackend):
+            raise NotImplementedError(
+                "Manager scene named-sensor-history capability on backend "
+                f"'{backend_type}': backend does not implement "
+                "the optional SensorHistoryBackend capability"
+            )
         try:
             return self._backend.bind_sensor_history(names, history_length=history_length)
         except (KeyError, TypeError, ValueError, NotImplementedError) as exc:
             raise type(exc)(
-                "Manager scene named-sensor-history capability on backend "
-                f"'{self._backend.backend_type}': {exc}"
+                f"Manager scene named-sensor-history capability on backend '{backend_type}': {exc}"
             ) from exc
 
     def __getitem__(self, name: str) -> Entity:

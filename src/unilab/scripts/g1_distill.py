@@ -2,7 +2,7 @@
 
 This module resolves task/configuration ownership and produces package-neutral,
 picklable environment inputs. Training, collection, IPC, and process lifecycle
-remain owned by ``uni_rl``.
+remain owned by ``unilab.rl``.
 """
 
 from __future__ import annotations
@@ -17,13 +17,13 @@ from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import DictConfig, OmegaConf
 from torch import nn
-from uni_rl.algos.distill.checkpoint import load_distillation_checkpoint
-from uni_rl.algos.distill.models import MLPStudentPolicy
-from uni_rl.algos.distill.teacher import SACTeacherSpec, load_sac_teacher_policy
-from uni_rl.env_contract import EnvFactory
 
 from unilab.base.config_adapter import BackendAdapter
 from unilab.base.env_factory import registry_env_factory
+from unilab.rl.algos.distill.checkpoint import load_distillation_checkpoint
+from unilab.rl.algos.distill.models import MLPStudentPolicy
+from unilab.rl.algos.distill.teacher import SACTeacherSpec, load_sac_teacher_policy
+from unilab.rl.env_contract import EnvFactory
 from unilab.utils.checkpoint import resolve_task_checkpoint_path
 
 _PACKAGE_CONF_ROOT = Path(__file__).resolve().parents[1] / "conf"

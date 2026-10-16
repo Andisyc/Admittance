@@ -33,7 +33,7 @@ collector sim processes land on their own physical GPU with no cross-GPU
 leakage; single-GPU PPO/SAC regressions pass alongside. Newton/Warp follows
 standard CUDA device semantics, so no `CUDA_VISIBLE_DEVICES` pinning (the
 Genesis quirk) is needed; the rank-local device reaches spawn collectors as
-a `newton_device="cuda:N"` env override (uni_rl 1.0.0's collector-side
+a `newton_device="cuda:N"` env override (unilab.rl 1.0.0's collector-side
 process-binding gate only covers mjwarp), and the SAC owner raises the
 collector tick-0 timeout to 180 s to cover Warp kernel compilation on the
 cold path.

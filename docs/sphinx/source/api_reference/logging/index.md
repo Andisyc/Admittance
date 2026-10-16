@@ -1,6 +1,5 @@
-# Training Logging — moved to `uni_rl`
+# Training Logging
 
-The W&B / TensorBoard bridges and structured training loggers moved out of
-the `unilab` package into the independently released **uni_rl** package
-(issue #1480): `uni_rl.logging` hosts `OnPolicyLogger`, `OffPolicyLogger`,
+The in-tree `unilab.rl.logging` package hosts the W&B / TensorBoard bridges,
+`OnPolicyLogger`, `OffPolicyLogger`,
 and the trace-event recorder.

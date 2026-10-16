@@ -49,6 +49,7 @@ _G1_LOCOMOTION_TASKS = frozenset(
     {
         "G1AMPWalk",
         "G1WalkFlat",
+        "G1WalkHeight",
         "G1WalkRough",
         "G1Walk23DofFlat",
         "G1Walk23DofRough",
