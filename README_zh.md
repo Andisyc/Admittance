@@ -132,9 +132,10 @@ recipe，同时消费同一套 task、backend 和 RL contract。
 }
 ```
 
-UniLab 以 [Apache License 2.0](LICENSE) 发布。独立的
-[UniSim](https://github.com/unilabsim/unisim) 与
-[UniLab RL](https://github.com/unilabsim/unilab_rl) 仓库包含各自的发布和引用信息。
+UniLab 以 [Apache License 2.0](LICENSE) 发布。训练算法、采集器和 IPC
+由本仓库的 `src/unilab/rl` 维护；物理后端继续使用
+[UniSim](https://github.com/unilabsim/unisim)。通用训练代码初始来源为
+[UniLab RL](https://github.com/unilabsim/unilab_rl)，当前运行不再依赖它的外部发行包。
 
 ## 致谢
 

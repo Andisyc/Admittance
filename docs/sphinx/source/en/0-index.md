@@ -137,7 +137,7 @@ flowchart LR
   registry --> env["NpEnv contract<br/>obs dict + info dict"]
   env --> backend["SimBackend<br/>unisim-core adapters"]
   env --> factory["EnvFactory contract"]
-  factory --> runtime["Runner / IPC<br/>unilab-rl async runtime"]
+  factory --> runtime["Runner / IPC<br/>unilab.rl async runtime"]
   runtime --> learner["Learner<br/>PPO / APPO / SAC / TD3"]
 ```
 

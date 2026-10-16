@@ -8,8 +8,7 @@ from collections.abc import Mapping
 from types import SimpleNamespace
 from typing import Any
 
-from uni_rl.algos.amp.runner import AMPAPPORunner
-
+from unilab.rl.algos.amp.runner import AMPAPPORunner
 from unilab.tasks.locomotion.g1.amp_motion import load_g1_amp_expert_transitions
 from unilab.tasks.locomotion.g1.amp_terms import (
     AMP_ANCHOR_BODY_INDEX,
@@ -32,7 +31,8 @@ def amp_runtime_identity() -> dict[str, Any]:
         "sim_backend": "mujoco",
         "unilab": _version("unilab"),
         "unisim_core": _version("unisim-core"),
-        "unilab_rl": _version("unilab-rl"),
+        # Retain the checkpoint identity field while versioning the in-tree owner.
+        "unilab_rl": _version("unilab"),
         "mujoco_uni_runtime": _version("mujoco-uni-runtime"),
     }
 

@@ -1,11 +1,4 @@
-"""Library-layer import boundary tests (issue #1240, updated for #1480).
-
-The RL algorithm layer (``unilab.algos``), the async IPC layer
-(``unilab.ipc``), and the training-logging layer (``unilab.logging``) moved to
-the independently released uni_rl package. uni_rl's own purity (no
-``unilab``/``unisim`` imports) is enforced by that repo's smoke gate; here we
-assert the UniLab side of the boundary.
-"""
+"""Library and in-tree training ownership boundaries (ADR-0008)."""
 
 from __future__ import annotations
 
@@ -17,8 +10,7 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _LIBRARY_PACKAGE = _REPO_ROOT / "src" / "unilab"
 
-# Symbols that moved to uni_rl.utils.* must not be re-defined anywhere in
-# src/unilab (importing them from uni_rl is the supported path).
+# Runtime-owned symbols must not be duplicated outside unilab.rl.
 _MIGRATED_SYMBOLS = {
     "split_obs_dict",
     "get_obs_dims",
@@ -54,7 +46,7 @@ def test_migrated_layer_directories_are_gone() -> None:
     leftovers = [name for name in ("algos", "ipc", "logging") if (_LIBRARY_PACKAGE / name).exists()]
 
     assert leftovers == [], (
-        "RL algorithm/IPC/logging layers live in the uni_rl package now; "
+        "RL algorithm/IPC/logging layers live in the unilab.rl package now; "
         f"src/unilab must not re-grow: {leftovers}"
     )
 
@@ -62,6 +54,8 @@ def test_migrated_layer_directories_are_gone() -> None:
 def test_no_module_redefines_migrated_symbols() -> None:
     violations = []
     for path in sorted(_LIBRARY_PACKAGE.rglob("*.py")):
+        if path.is_relative_to(_LIBRARY_PACKAGE / "rl"):
+            continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -69,9 +63,20 @@ def test_no_module_redefines_migrated_symbols() -> None:
                     violations.append((path.relative_to(_REPO_ROOT).as_posix(), node.name))
 
     assert violations == [], (
-        "these symbols live in uni_rl.utils.*; import them from there instead "
+        "these symbols live in unilab.rl.utils.*; import them from there instead "
         f"of re-defining: {violations}"
     )
+
+
+def test_generic_training_does_not_import_environment_owners() -> None:
+    forbidden = ("unisim", "unilab.base", "unilab.tasks", "unilab.envs", "unilab.scripts")
+    violations = [
+        (path.relative_to(_REPO_ROOT).as_posix(), module)
+        for path in sorted((_LIBRARY_PACKAGE / "rl").rglob("*.py"))
+        for module in sorted(_imports(path))
+        if any(module == owner or module.startswith(f"{owner}.") for owner in forbidden)
+    ]
+    assert violations == [], f"generic training must use EnvFactory injection: {violations}"
 
 
 _UTILS_FORBIDDEN_LAYERS = (
@@ -81,7 +86,7 @@ _UTILS_FORBIDDEN_LAYERS = (
     "unilab.managers",
     "unilab.training",
     "unilab.visualization",
-    "uni_rl",
+    "unilab.rl",
 )
 
 
@@ -107,7 +112,7 @@ _NUMPY_MDP_MODULES = (
 )
 _NUMPY_MDP_FORBIDDEN_LAYERS = (
     "torch",
-    "uni_rl",
+    "unilab.rl",
     "unilab.training",
     "unilab.base.backend",
 )

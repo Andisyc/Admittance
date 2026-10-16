@@ -29,9 +29,11 @@ architecture changes.
 
 ## Architecture contracts
 
-- UniLab provides environments and adapters. `uni_rl` owns algorithm runners,
-  learners, collectors, IPC, and training logs; `uni_rl` must not import UniLab.
-  The env factory must be a pickleable `EnvFactory` for spawn collectors.
+- Training implementations live in this repository under `unilab.rl`: algorithm
+  runners, learners, collectors, IPC, and training logs. Do not restore an
+  external `unilab-rl` runtime dependency. Keep environment construction behind
+  the pickleable `unilab.rl.env_contract.EnvFactory` for spawn collectors;
+  generic runtime modules must not import task-specific environment owners.
 - Environment reset returns `(obs_dict, info_dict)` and `NpEnvState.obs` is a
   dict. Keep `obs_groups_spec` and policy dimensions consistent with wrappers
   and learners.

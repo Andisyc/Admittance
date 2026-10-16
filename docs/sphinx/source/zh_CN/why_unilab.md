@@ -52,8 +52,8 @@ UniLab 是位于 physics engine 演进之上的 RL 基础设施/runtime 层。�
 
 UniLab 提供机器人 RL 所需的 task、environment、配置、adapter 和实验工作流。物理引擎
 由 [`unisim-core`](https://github.com/unilabsim/unisim) 提供；算法和异步 runner 组件由
-[`unilab-rl`](https://github.com/unilabsim/unilab_rl) 提供。这样的分工让机器人专属仓库
-可以复用任务 recipe，而不必同时维护所有物理引擎和 learner 实现。
+本仓库的 `unilab.rl` 维护。任务和环境构造通过注入的环境工厂与通用采集器、learner
+保持清晰边界。
 
 UniLab 不是新的通用 physics engine，不保证跨后端数值等价，也不承诺每个平台都支持每个
 task。安装细节、后端限制和 contract 行为请使用对应的用户指南与开发者指南。

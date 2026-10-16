@@ -15,10 +15,9 @@ from hydra.core.global_hydra import GlobalHydra
 
 pytest.importorskip("mujoco")
 
-from uni_rl.algos.appo.runner import APPORunner
-
 from unilab.base.config_adapter import BackendAdapter
 from unilab.base.env_factory import registry_env_factory
+from unilab.rl.algos.appo.runner import APPORunner
 from unilab.structured_configs import APPOConfig
 
 

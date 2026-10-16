@@ -14,14 +14,6 @@ if str(SRC_DIR) not in sys.path:
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from uni_rl.algos.hora import HoraDistillationTrainer
-from uni_rl.algos.hora.distill import (
-    build_student_actor_and_normalizer,
-    cfg_with_checkpoint_runtime,
-    load_distilled_checkpoint,
-    student_policy,
-)
-from uni_rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper as RslRlVecEnvWrapper
 from unisim.backend.base import log_playback_plan
 from unisim.backend.mujoco.xml import materialize_scene_visual_override
 
@@ -29,6 +21,14 @@ from unilab.base.config_adapter import (
     BackendAdapter,
     create_env,
 )
+from unilab.rl.algos.hora import HoraDistillationTrainer
+from unilab.rl.algos.hora.distill import (
+    build_student_actor_and_normalizer,
+    cfg_with_checkpoint_runtime,
+    load_distilled_checkpoint,
+    student_policy,
+)
+from unilab.rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper as RslRlVecEnvWrapper
 from unilab.training import (
     ensure_registries,
     format_hora_stage2_checkpoint_error,
@@ -151,7 +151,7 @@ def play_hora_distill(cfg: DictConfig, device: str) -> str | None:
         )
         return None
 
-    # uni_rl's cfg_with_checkpoint_runtime no longer composes teacher defaults;
+    # unilab.rl's cfg_with_checkpoint_runtime no longer composes teacher defaults;
     # the caller owns that composition (issue #1480).
     cfg = cfg_with_checkpoint_runtime(_apply_teacher_defaults(cfg), checkpoint)
     env = create_env(

@@ -447,8 +447,7 @@ def test_hora_distill_training_always_closes_env(raises: bool) -> None:
 
 
 def test_hora_distill_checkpoint_runtime_only_restores_model_structure():
-    from uni_rl.algos.hora.distill import cfg_with_checkpoint_runtime
-
+    from unilab.rl.algos.hora.distill import cfg_with_checkpoint_runtime
     from unilab.training.hora_distill_config import apply_teacher_defaults
 
     cfg = _hora_distill_cfg(["task=sharpa_inhand/mujoco_nodr"])
@@ -513,8 +512,7 @@ def test_hora_distill_checkpoint_runtime_only_overrides_model_side(
     teacher_algo_family: str,
     checkpoint_model: dict[str, Any],
 ):
-    from uni_rl.algos.hora.distill import cfg_with_checkpoint_runtime
-
+    from unilab.rl.algos.hora.distill import cfg_with_checkpoint_runtime
     from unilab.training import hora_distill_config as distill_config
 
     owner_cfg = OmegaConf.create(
@@ -552,7 +550,7 @@ def test_hora_distill_checkpoint_runtime_only_overrides_model_side(
 
     monkeypatch.setattr(distill_config, "apply_teacher_defaults", lambda cfg: owner_cfg)
 
-    # uni_rl's cfg_with_checkpoint_runtime only restores model-side fields;
+    # unilab.rl's cfg_with_checkpoint_runtime only restores model-side fields;
     # composing teacher-owner defaults first is the caller's job (issue #1480).
     effective_cfg = cfg_with_checkpoint_runtime(
         distill_config.apply_teacher_defaults(OmegaConf.create({})), checkpoint
@@ -2061,9 +2059,8 @@ def test_offpolicy_play_actor_spec_keeps_standard_sac_and_flashsac():
 def test_offpolicy_build_play_actor_preserves_flashsac_model_kwargs(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    import uni_rl.algos.common.actor_factory as actor_factory
-    import uni_rl.algos.common.normalization as normalization
-
+    import unilab.rl.algos.common.actor_factory as actor_factory
+    import unilab.rl.algos.common.normalization as normalization
     from unilab.visualization.interactive_playback import build_play_actor
 
     captured: dict[str, Any] = {}
@@ -2118,8 +2115,8 @@ def test_offpolicy_build_play_actor_restores_td3_state_and_normalizer(
     monkeypatch: pytest.MonkeyPatch,
 ):
     import torch
-    import uni_rl.algos.fast_td3.learner as learner_module
 
+    import unilab.rl.algos.fast_td3.learner as learner_module
     from unilab.visualization.interactive_playback import build_play_actor, load_play_actor
 
     captured: dict[str, Any] = {}
@@ -2288,7 +2285,7 @@ def test_play_offpolicy_can_skip_onnx_export_and_still_record_video(
         ),
     )
 
-    import uni_rl.algos.common.actor_factory as actor_factory
+    import unilab.rl.algos.common.actor_factory as actor_factory
 
     monkeypatch.setattr(actor_factory, "build_actor", lambda *args, **kwargs: FakeActor())
 
@@ -2418,7 +2415,7 @@ def test_play_offpolicy_uses_hora_sac_actor_and_priv_info(
         lambda *args, **kwargs: (str(checkpoint), str(run_dir)),
     )
 
-    import uni_rl.algos.common.actor_factory as actor_factory
+    import unilab.rl.algos.common.actor_factory as actor_factory
 
     def fake_build_actor(algo_type, obs_dim, action_dim, hidden_dim, use_layer_norm, device, **kw):
         captured["build_actor"] = (algo_type, obs_dim, action_dim, kw)
@@ -2528,7 +2525,7 @@ def _play_interactive():
 
 def test_play_wrapper_imports_shared_implementation():
     """Verify play_interactive.py uses shared RslRlVecEnvWrapper."""
-    from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper as SharedWrapper
+    from unilab.rl.algos.rsl_rl import RslRlVecEnvWrapper as SharedWrapper
 
     mod = _play_interactive()
     # The wrapper class in play_interactive should be the shared one
@@ -2539,7 +2536,8 @@ def test_play_wrapper_uses_current_reset_contract():
     """Verify wrapper reset() uses current (obs, info) contract, not old (_, obs, _)."""
     import numpy as np
     from tensordict import TensorDict
-    from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper
+
+    from unilab.rl.algos.rsl_rl import RslRlVecEnvWrapper
 
     # Create a fake environment that returns (obs, info) tuple
     class FakeEnv:
@@ -2573,7 +2571,8 @@ def test_play_wrapper_uses_current_reset_contract():
 def test_play_wrapper_policy_obs_mode_actor():
     """Verify wrapper supports policy_obs_mode='actor'."""
     import numpy as np
-    from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper
+
+    from unilab.rl.algos.rsl_rl import RslRlVecEnvWrapper
 
     class FakeEnv:
         def __init__(self):
@@ -2610,7 +2609,8 @@ def test_play_wrapper_policy_obs_mode_actor():
 
 def test_play_wrapper_flat_policy_excludes_critic_only_group():
     import numpy as np
-    from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper
+
+    from unilab.rl.algos.rsl_rl import RslRlVecEnvWrapper
 
     class FakeEnv:
         def __init__(self):
@@ -2653,7 +2653,8 @@ def test_play_wrapper_flat_policy_excludes_critic_only_group():
 
 def test_play_wrapper_preserves_hora_priv_info_and_proprio_history():
     import numpy as np
-    from uni_rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
+
+    from unilab.rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
 
     class FakeEnv:
         def __init__(self):
@@ -2716,7 +2717,8 @@ def test_play_wrapper_preserves_hora_priv_info_and_proprio_history():
 
 def test_play_wrapper_step_exports_timeout_bootstrap_obs():
     import torch
-    from uni_rl.algos.rsl_rl import RslRlVecEnvWrapper
+
+    from unilab.rl.algos.rsl_rl import RslRlVecEnvWrapper
 
     class FakeEnv:
         def __init__(self):
@@ -2772,7 +2774,8 @@ def test_play_wrapper_step_exports_timeout_bootstrap_obs():
 
 def test_play_wrapper_timeout_bootstrap_preserves_hora_priv_info():
     import torch
-    from uni_rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
+
+    from unilab.rl.algos.hora.rsl_rl import HoraRslRlVecEnvWrapper
 
     class FakeEnv:
         def __init__(self):

@@ -47,10 +47,10 @@ Concrete locomotion, manipulation, and motion-tracking task packages.
 ::::{grid} 1 1 2 2
 :gutter: 3
 
-:::{grid-item-card} 🎛 Learning algorithms → `uni_rl`
+:::{grid-item-card} 🎛 Learning algorithms → `unilab.rl`
 :link: algos/index
 :link-type: doc
-PPO / APPO / SAC / TD3 variants moved to the uni_rl package (issue #1480).
+PPO / APPO / SAC / TD3 variants moved to the unilab.rl package (issue #1480).
 :::
 
 :::{grid-item-card} 🏋 `unilab.training`
@@ -59,10 +59,10 @@ PPO / APPO / SAC / TD3 variants moved to the uni_rl package (issue #1480).
 Runtime helpers, monitoring, reward bookkeeping, runner orchestration.
 :::
 
-:::{grid-item-card} 🔗 Shared-memory runtime → `uni_rl.ipc`
+:::{grid-item-card} 🔗 Shared-memory runtime → `unilab.rl.ipc`
 :link: ipc/index
 :link-type: doc
-Shared-memory rollout and replay primitives moved to the uni_rl package
+Shared-memory rollout and replay primitives moved to the unilab.rl package
 (issue #1480).
 :::
 
@@ -103,10 +103,10 @@ Scene rendering and viser bridges.
 Math, IO, and numerical helpers.
 :::
 
-:::{grid-item-card} 📝 Training logging → `uni_rl.logging`
+:::{grid-item-card} 📝 Training logging → `unilab.rl.logging`
 :link: logging/index
 :link-type: doc
-W&B / TensorBoard bridges and structured logging moved to the uni_rl package
+W&B / TensorBoard bridges and structured logging moved to the unilab.rl package
 (issue #1480).
 :::
 

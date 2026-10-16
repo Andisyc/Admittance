@@ -116,11 +116,11 @@ language-independent absolute path.
 3. Search first with `rg` / `rg --files`; update an existing page instead of
    creating a duplicate.
 4. Gather evidence near the claim:
-   - algorithms and tasks: `src/unilab/conf/`, `src/unilab/scripts/train_*.py`, `uni_rl`
-   - env contract: `src/unilab/base/np_env.py`, `uni_rl.env_contract`
+   - algorithms and tasks: `src/unilab/conf/`, `src/unilab/scripts/train_*.py`, `unilab.rl`
+   - env contract: `src/unilab/base/np_env.py`, `unilab.rl.env_contract`
    - backend contract: `unisim.backend.base`
    - registry: `src/unilab/base/registry.py`
-   - runner/IPC: `uni_rl.ipc.async_runner`, `src/unilab/training/run.py`
+   - runner/IPC: `unilab.rl.ipc.async_runner`, `src/unilab/training/run.py`
    - architecture: ADRs and `development-standard.md`
 5. Check the other language for a related topic, but do not force path mirroring
    or mass renames.

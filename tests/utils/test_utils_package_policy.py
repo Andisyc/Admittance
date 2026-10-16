@@ -40,8 +40,11 @@ def test_repo_has_no_package_level_utils_imports() -> None:
             assert "from unilab.utils import" not in path.read_text(encoding="utf-8"), path
 
 
-def test_algo_layer_no_longer_lives_in_unilab() -> None:
-    """The algo/IPC/logging layers moved to uni_rl (issue #1480)."""
+def test_algo_layer_lives_under_rl_owner() -> None:
+    """ADR-0008 keeps one in-tree owner without reviving old flat packages."""
+    assert Path("src/unilab/rl/algos").is_dir()
+    assert Path("src/unilab/rl/ipc").is_dir()
+    assert Path("src/unilab/rl/logging").is_dir()
     assert not (Path("src/unilab/algos")).exists()
     assert not (Path("src/unilab/ipc")).exists()
     assert not (Path("src/unilab/logging")).exists()

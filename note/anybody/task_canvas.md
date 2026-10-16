@@ -4,6 +4,7 @@
 
 ## 当前游标与授权
 
+- **2026-10-16 架构更正：**用户明确要求将训练实现放回 UniLab，当前按 [ADR-0008](../../docs/sphinx/source/adr/ADR-0008-in-tree-training-runtime.md) 迁入 `src/unilab/rl`，移除外部训练包。下文 S1/S3 中外部 `uni_rl` 的表述是当时的核查基线，已被本次决定替代；不据此回退外部依赖。当前进度及验证以协作总览最新交接为准，S4 尚未开始。
 - 用户已确认：在当前 `ADAPT/Admittance` 中接入 Anybody Encoder–Decoder，**以 AMASS 为训练数据来源**，后续使用 UniLab 异步训练架构。不能用已有 G1 NPZ 接入替代 AMASS 数据接入。
 - 当前授权：用户已要求将 `Andisyc/Admittance` 的 `main` 更新同步到 `feat/anybody-muse-s2` 并交付该分支。已核实仓库所有者为 `Andisyc`，当前授权账号 `sss99991112` 有推送权限但不是所有者；此前称其为当前账号个人 fork 不准确。仍遵守**不在本地下载或保留训练数据，不在本地训练，后续走远程 SSH**；不执行原始数据下载、优化器或训练。
 - 当前进度：**S1、S2 基线和 S3 数据层已完成，阶段验收 3/6**。S3 已实现原始 AMASS 读取、窗口/批次、显式分组划分，并验证 384 条真实动作。网络输入特征/训练标签和异步训练尚待 S4，不把人体数据当作已联接的 524 维机器人观测。
@@ -22,8 +23,8 @@
 | --- | --- | --- |
 | 当前目标 | `Andisyc/Admittance`，分支 `feat/anybody-muse-s2`；S3 起点为 `52466db7f5d74989b064372ffc2f0e22a4b2a34f`，后续提交身份由 Git 记录 | code-confirmed |
 | 模型参考 | `hazel-hammer/Anybody@0cffa139eab0bc145c9216223e249f03c67a324c` | code-confirmed |
-| 训练包基线 | 当前 `pyproject.toml` / `uv.lock` 固定 `unilab-rl==1.0.0`；S3 准备阶段已在隔离临时环境安装，未切换项目依赖或修改锁文件 | code-confirmed |
-| 训练器依赖 / 网络 owner | 训练器仍为外部 `unilab-rl==1.0.0`；自定义纯网络归当前 Admittance 的 `src/unilab/models/anybody.py`。`../unilab_rl` 仅作上游源码参考，不作为开发或运行依赖 | code-confirmed |
+| 训练包基线 | 初始通用源码来自 `unilab-rl==1.0.0`，现迁入 `src/unilab/rl`；工作树已移除外部包依赖，最终验收待 CI | implementation-in-progress |
+| 训练器依赖 / 网络 owner | 算法、collector、learner、IPC 归当前仓库 `src/unilab/rl`；自定义纯网络归 `src/unilab/models/anybody.py`。不以旁边源码仓库作为运行依赖 | implementation-in-progress |
 | 旧 UniLab | `unilab_stand@e1717b9…` 只作历史参考；其 `src/unilab/algos/torch/*` 路径不是当前修改目标 | code-confirmed |
 | 既有笔记 | `note/upstream_migration/` 是 AMP 历史规划/执行记录，不授权本主题；不修改其状态 | note-confirmed |
 
@@ -38,16 +39,16 @@ AMASS 原始人体序列 -> 字段/帧率/模型校验 -> clip 内时序窗口
 UniLab 机器人动作数据 / task observation terms
   -> ObservationManager（历史与 reset）
   -> UniLab Hydra 配置 / train_appo（组装）
-  -> uni_rl APPORunner -> collector / learner / 权重同步
+  -> unilab.rl APPORunner -> collector / learner / 权重同步
   -> Encoder -> latent -> Decoder -> 关节动作
   -> UniLab action manager -> unisim
 
-训练状态 -> uni_rl checkpoint -> UniLab playback / ONNX 组装
+训练状态 -> unilab.rl checkpoint -> UniLab playback / ONNX 组装
 ```
 
-自定义网络属于当前 Admittance 的 `unilab.models`；算法、collector、learner、IPC 继续复用外部 `uni_rl`。纯网络仅依赖 Torch 和标准库。S4 通过现有可配置 actor/runtime 扩展点接入，扩展代码也提交 Admittance；不把自定义网络的存放位置误解成必须 fork 训练包。环境仍由可 pickle 的 `EnvFactory` 注入，不新增 `uni_rl` 对 UniLab 的源码依赖。
+自定义网络属于当前 Admittance 的 `unilab.models`；算法、collector、learner、IPC 由仓内 `unilab.rl` 管理。纯网络仅依赖 Torch 和标准库。S4 通过仓内可配置 actor/runtime 扩展点接入。环境仍由可 pickle 的 `EnvFactory` 注入，通用训练模块不导入具体 task/环境注册。
 
-现有约束来自 [AGENTS.md](../../AGENTS.md)、[层级边界](../../docs/sphinx/source/en/4-developer_guide/1-architecture/3-layer_boundaries.md) 及 [观测契约 ADR-0005](../../docs/sphinx/source/adr/ADR-0005-unified-obs-critic-env-and-ipc-contract.md)。ADR-0007 中尚有拆分前的 runner 归属表述；当前实际归属按 AGENTS、层级页、依赖及入口 import 共同确认，不能据旧表述恢复仓内算法实现。
+现有约束来自 [AGENTS.md](../../AGENTS.md)、[层级边界](../../docs/sphinx/source/en/4-developer_guide/1-architecture/3-layer_boundaries.md)、[观测契约 ADR-0005](../../docs/sphinx/source/adr/ADR-0005-unified-obs-critic-env-and-ipc-contract.md) 及训练所有权更正 ADR-0008。物理接口仍遵循 ADR-0007 的 unisim 边界。
 
 ## S1 接口结果：ANYBODY-IO-v1
 
@@ -55,7 +56,7 @@ UniLab 机器人动作数据 / task observation terms
 
 | ID | 接口/不变量 | 当前状态 |
 | --- | --- | --- |
-| I1 | 代码与交付目标均为当前 Admittance；自定义网络在仓内，复用外部 `uni_rl` 训练器 | 用户明确纠正并确认 |
+| I1 | 代码与交付目标均为当前 Admittance；自定义网络在仓内，训练器内置 `unilab.rl` | 最新用户决定及 ADR-0008 替代原外部训练器归属 |
 | I2 | 移植 `_MUSETransformerEncoder` 和条件式 MLP Decoder；KP Encoder、teacher 网络及 donor 训练器不属于 S2 | S1 已绑定 |
 | I3 | 机器人分支的 goal/proprio/mask 语义见下表；`critic` 不进入模型。AMASS 人体参数是另一个数据层 | G1 基线已绑定；AMASS 特征适配尚未定义 |
 | I4 | G1 起始配置为 latent=16、H=5、每帧 proprio=90、原始关节动作=29；网络维度由配置计算 | S2 已实现并通过 CPU 测试 |

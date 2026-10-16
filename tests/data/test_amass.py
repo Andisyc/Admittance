@@ -269,7 +269,7 @@ def test_import_does_not_initialize_robot_tasks_or_training_packages():
             sys.executable,
             "-c",
             "import sys; import unilab.data; "
-            "assert not any(x == 'unisim' or x == 'uni_rl' or "
+            "assert not any(x == 'unisim' or x == 'unilab.rl' or "
             "x.startswith('unilab.tasks') for x in sys.modules)",
         ],
         check=True,

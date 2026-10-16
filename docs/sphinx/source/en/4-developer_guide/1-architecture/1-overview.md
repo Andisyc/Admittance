@@ -14,7 +14,7 @@ MuJoCo or Motrix      shared memory       torch
 
 PPO is a synchronous single-process path. APPO and off-policy
 algorithms use the async runner, shared buffers, and weight synchronization
-primitives under `uni_rl.ipc` (unilab-rl repo) and `uni_rl` (unilab-rl repo).
+primitives under `unilab.rl.ipc` (this repository) and `unilab.rl` (this repository).
 
 ## Layer Boundaries
 
@@ -23,7 +23,7 @@ primitives under `uni_rl.ipc` (unilab-rl repo) and `uni_rl` (unilab-rl repo).
 | Backend | `unisim.backend` | `SimBackend`, physics state, optional capabilities |
 | Env | `src/unilab/envs/`, `src/unilab/base/np_env.py` | MDP semantics, observation, reward, reset |
 | Config and registry | `src/unilab/conf/`, `src/unilab/base/registry.py`, `src/unilab/structured_configs.py` | Schema, owner YAMLs, env/backend registration |
-| Algorithms and IPC | `uni_rl` (unilab-rl repo), `uni_rl.ipc` (unilab-rl repo) | Learners, runners, buffers, weight sync |
+| Algorithms and IPC | `unilab.rl` (this repository), `unilab.rl.ipc` (this repository) | Learners, runners, buffers, weight sync |
 | Scripts | `scripts/`, `src/unilab/cli.py` | Thin assembly and CLI routing |
 
 ## Design Rules
@@ -86,7 +86,7 @@ Use `make test` for the fast path and `make test-all` (`make check`,
 - `src/unilab/base/np_env.py`
 - `unisim.backend.base`
 - `src/unilab/base/registry.py`
-- `uni_rl.ipc.async_runner` (unilab-rl repo)
+- `unilab.rl.ipc.async_runner` (this repository)
 - `src/unilab/training/run.py`
 
 ## Related ADRs
