@@ -30,9 +30,7 @@ DEFAULT_G1_AMP_MANIFEST = ASSETS_ROOT_PATH / "motions/g1/amp_walk/manifest.json"
 REGAIT_V013_A022_MANIFEST = (
     ASSETS_ROOT_PATH / "motions/g1/regait_v013_a022_full_horizon_313/manifest.json"
 )
-REGAIT_V017_A022_MANIFEST = (
-    ASSETS_ROOT_PATH / "motions/g1/regait_v017_a022_313/manifest.json"
-)
+REGAIT_V017_A022_MANIFEST = ASSETS_ROOT_PATH / "motions/g1/regait_v017_a022_313/manifest.json"
 G1_AMP_EXPERT_MANIFESTS = {
     "amp_mjlab": DEFAULT_G1_AMP_MANIFEST,
     "regait_v013_a022": REGAIT_V013_A022_MANIFEST,
