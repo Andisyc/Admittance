@@ -65,7 +65,9 @@ def test_dense_smplh_all_shape_dynamic_coefficients_and_global_frames(human_case
         for k, coefficient in enumerate(clip.dmpls[frame]):
             vertices += dynamic[:, :, k] * coefficient
         rest = weights["J_regressor"] @ vertices
-        local = Rotation.from_rotvec(clip.poses[frame].reshape(52, 3)).as_matrix()
+        # SciPy's native backend may request a writable buffer; the AMASS
+        # reader deliberately keeps its owned arrays immutable.
+        local = Rotation.from_rotvec(clip.poses[frame].reshape(52, 3).copy()).as_matrix()
         p, r = np.empty((22, 3)), np.empty((22, 3, 3))
         p[0], r[0] = rest[0] + clip.trans[frame], local[0]
         for joint in range(1, 22):
