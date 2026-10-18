@@ -50,6 +50,8 @@ print(batch["poses"].shape, batch["fps"])
 
 ## S4：显式人体模型与 G1 动作转换
 
+这是原始人体参数转换路线。当前正式训练另采用下文已重定向的 G1 AMASS 数据，因此不必先取得人体模型权重；两种来源不能混淆。
+
 正式入口为 `scripts/motion/amass_to_g1.py`；它只转换，不训练。当前支持显式声明的 packed **SMPL-H**（156 维姿态），不是把任意 AMASS 文件强行当 SMPL-X。人体模型需提供匹配性别、含全部 beta 维度的 dense NPZ（`v_template`、`shapedirs`、`J_regressor`、`kintree_table`）；非零 DMPL 还必须提供匹配的 `eigvec` NPZ。读取时不启用 pickle，不截断 beta、不补关节、不默默丢弃 DMPL。模型身份和配套文件需由来源记录确认，156 维本身不构成身份声明。
 
 转换需要可选的离线预处理环境：MuJoCo 3.11、SciPy、Mink、DAQP，以及官方 [GMR 固定版本](https://github.com/YanjieZe/GMR/tree/bb1bbe40774794fceb2a7c579a3464a28e68c844)。按官方说明安装 GMR 及其 G1 资源；若源码独立放置，可将该源码根目录加入 `PYTHONPATH`。这些是离线工具依赖，未引入外部训练运行时或更改项目锁。当前适配器以关键字向 Mink 传递限位，不需要修改 GMR 安装包。
@@ -72,15 +74,41 @@ PYTHONPATH=src:/path/to/GMR uv run python scripts/motion/amass_to_g1.py \
 
 用户已选择直接 RL。独立 owner 配置为 `src/unilab/conf/appo/task/anybody_g1/mujoco.yaml`：Encoder 从 524 维观测生成 16 维潜码，Decoder 接收潜码和 450 维本体历史，输出 29 维动作；Critic 独立使用 MLP。输入的 5 帧历史由现有 ObservationManager 管理，mask 保持原始零、所有目标可见、关闭观测归一化。Gaussian 探索发生在原始关节动作上，现有 G1 action scale/default offset 不变。它复用仓内 APPO 采集/传输/V-trace 更新/权重同步，不要求 Teacher。
 
-该配置的 `motion_file` 是必填值，拒绝悄悄使用旧示例。以下仅为**第三步远端短训练验收的待执行示例**，本轮未执行：
+该配置的 `motion_file` 是必填值，拒绝悄悄使用旧示例。用户已授权跳过独立短训练，直接远端正式训练。使用下文生成的训练集配置时，入口为：
 
 ```bash
 uv run train --algo appo --task anybody_g1 --sim mujoco \
-  env.commands.motion.params.motion_file=/absolute/path/to/converted_g1.npz \
-  algo.num_envs=8 algo.steps_per_env=16 algo.max_iterations=2 \
-  training.no_play=true training.export_policy=false
+  training.device=cuda:0 training.collector_device=cuda:0 \
+  training.no_play=true training.export_policy=false \
+  --config-dir /absolute/project/datasets/amass/g1/xwbc/run-config \
+  --config-name formal
 ```
 
-设备应在远端根据实际 CPU/GPU 配置 `training.device` 与 `training.collector_device`，不以此示例推断吞吐或策略质量。新 profile 默认关闭训练后自动播放及未验收的 ONNX 导出；完整保存/恢复与推理仍归后续验收。直接 RL 从头训练并不自动获得覆盖任意潜码的动作先验。
+设备应根据远端硬件配置；以上为单张 CUDA GPU 示例，不推断吞吐或策略质量。正式 profile 默认 1024 环境、24 steps/env、5000 次迭代，每 500 次保存。新 profile 默认关闭训练后自动播放及未验收的 ONNX 导出；完整保存/恢复与推理仍归后续验收。直接 RL 从头训练并不自动获得覆盖任意潜码的动作先验。
 
-当前证据：正式数据 owner 已用真实 LAFAN1 骨架通过 30→50 Hz 转换和现有 loader 读取；独立数学/接口测试覆盖人体形变和坐标规则。**真实 SMPL-H/DMPL 权重仍未取得，真实 AMASS 重建、完整仿真和参数更新尚未验证。**不能把合成权重测试或 LAFAN1 结果当作 AMASS 整链验收。
+原始人体路线证据：正式数据 owner 已用真实 LAFAN1 骨架通过 30→50 Hz 转换和现有 loader 读取；独立数学/接口测试覆盖人体形变和坐标规则。**真实 SMPL-H/DMPL 权重仍未取得，原始 AMASS 人体重建未验证。**预重定向 G1 AMASS 路线已进入正式异步训练，运行及中断事实见 `collaboration/overview.md`；不能把合成权重测试或 LAFAN1 结果当作原始 AMASS 重建验收。
+
+## 正式训练数据：已经重定向的 G1 AMASS
+
+来源为发布者的 [X-WBC 数据集](https://huggingface.co/datasets/TonyZhang1999/xwbc-retarget-data)，固定 revision `b4e169f460bd68b27e04e75c99be6e0affbfe046`，文件 `amass/unitree_g1_29dof.tar.gz`：8,099,086,834 bytes，SHA256 `2ed1c6270a6c2d060300cdb8c607a31d2b118f131d6555e6f9dede4321bd1738`。发布者标注每个机器人约 1.3 万段 AMASS；实际归档条数由准备程序统计。它不是原始 SMPL-H 参数，也不是 LAFAN1 替代集。
+
+仅在远端准备完整归档：
+
+```bash
+mkdir -p datasets/amass/archives/xwbc
+aria2c --continue=true --auto-file-renaming=false \
+  --checksum=sha-256=2ed1c6270a6c2d060300cdb8c607a31d2b118f131d6555e6f9dede4321bd1738 \
+  --dir=datasets/amass/archives/xwbc --out=unitree_g1_29dof.tar.gz \
+  https://huggingface.co/datasets/TonyZhang1999/xwbc-retarget-data/resolve/b4e169f460bd68b27e04e75c99be6e0affbfe046/amass/unitree_g1_29dof.tar.gz
+uv pip install --python .venv/bin/python --no-deps scipy==1.16.3
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 uv run --no-sync python scripts/motion/prepare_xwbc.py \
+  --archive datasets/amass/archives/xwbc/unitree_g1_29dof.tar.gz \
+  --source-dir datasets/amass/raw/xwbc \
+  --output-dir datasets/amass/g1/xwbc --workers 8
+```
+
+完整归档保留用于后续扩展，首轮沿用此前的 CMU 范围：提取其中全部 CMU 片段，按源文件中的 CMU subject 编号隔离训练/验证。原始 reader 的 384 条/512 MiB 下载上限不限制这条预重定向数据路线。
+
+适配器 `unilab.data.robot_motion` 按 `joint_names` 映射，不复用源 32 刚体索引。显式声明根为源 body 0、米/Z-up/wxyz；每段在至多九个源帧做目标非 world 刚体的注入式姿态匹配，要求误差不超过 0.1 mm/0.1 mrad。允许 float32 四元数范数误差不超过 1e-5 并明确归一化，其余非法数据拒绝。根/关节轨迹在明确时间网格上重采样至 50 Hz，再由目标模型 FK/Jacobian 重算 31 刚体及速度；不继承源速度，不裁剪越界关节。
+
+输出 `manifest.json` 记录通过、拒绝及短片段排除原因、文件数、时长与实现身份；`splits.json` 记录 subject 隔离。`run-config/formal.yaml` 只注入训练动作列表，复用原有 Hydra task、网络和优化器配置，避免把数千条路径塞进命令行。读取原始人体权重的路线仍可独立使用，预重定向数据无需这些权重。上述数据、模型与缓存均留在 gitignore 目录，不上传 GitHub；AMASS 来源与各子集许可和引用要求仍适用。

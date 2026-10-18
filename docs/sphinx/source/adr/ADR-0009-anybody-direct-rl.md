@@ -21,6 +21,7 @@ orphan: true
 - 新增独立 G1 配置：当前目标 73 维，按 term 拼接的最旧到最新 5 帧 [29,29,3,29] 历史，以及原始 mask。历史/reset 仍归 ObservationManager。初始直接跟踪方案使所有目标可见，关闭观测归一化和编译，Critic 独立使用 MLP，不消费教师标签。
 - 保留目标 G1 的动作尺度、默认偏置及已有任务配置；概率描述环境处理前的原始动作，不引入 donor 的 effort/stiffness 动作尺度。
 - 离线人体重建必须显式声明 packed SMPL-H 并提供匹配的 dense NPZ 人体/DMPL 权重，保留所有 beta/DMPL 系数。未知模型、维度不兼容或缺权重必须报错，禁止自动猜测、补零或静默丢弃动态形变。
+- 也可使用来源明确的预重定向 G1 AMASS，直接进入机器人数据边界，无需先取得人体权重。固定数据 revision/SHA256，按关节名称映射并检查源根/四元数/运动学语义，再用本仓模型重算 FK 和速度；源刚体数组不能直接作为目标索引。首轮使用 X-WBC 完整归档中的合格 CMU 片段，按 subject 分离训练/验证，拒绝越界而非裁剪。此路线不构成原始人体重建验收。
 - 命名世界系人体姿态可以桥接到 GMR 名为 SMPL-X 的共同刚体匹配表；这不等同于把 SMPL-H 参数当作 SMPL-X 参数。真实形体、frame offset 与数据质量仍待验证。
 - 只转移根姿态和命名关节，再用本仓目标 XML 重新计算世界系刚体原点位置/速度；NPZ 包含 world0 和名称。使用明确时间网格，不以整数跳帧冒充目标频率；GMR 附加刚体不能决定目标索引。
 - 网络结构与策略 I/O 纳入 sim2sim 契约。完整导出留至 S5，本 profile 显式关闭未验收导出及训练后自动播放；已有默认行为保持不变。
@@ -31,11 +32,11 @@ orphan: true
 
 ## Validation boundary
 
-远端运行前检查人体重建数学、时间/四元数/限位、NPZ 布局、历史/reset、采集与学习端的均值/log-prob、E/D 梯度连通和真实权重传输，不执行本地 optimizer 更新或 rollout。缺少真实权重与远端接入仍是验收前提；不能从这些检查推断动力学可行性、策略质量或完整训练恢复成功。
+远端运行前检查人体重建数学、时间/四元数/限位、NPZ 布局、历史/reset、采集与学习端的均值/log-prob、E/D 梯度连通和真实权重传输，不执行本地 optimizer 更新或 rollout。真实人体权重只约束原始人体重建路线，预重定向数据不以它为前提；两条路线都不能从非训练检查推断动力学可行性、策略质量或完整训练恢复成功。用户已授权直接正式训练，不另设独立短训练步骤，运行事实由正式任务日志与产物记录。
 
 ## Evidence In Repo
 
-`src/unilab/data/`、`src/unilab/rl/algos/anybody/`、`src/unilab/conf/appo/task/anybody_g1/mujoco.yaml`、`tests/rl/test_anybody_actor.py`、`tests/data/test_human_motion.py`、`tests/data/test_tracking_export.py`、`tests/models/test_anybody_observations.py`。
+`src/unilab/data/`、`scripts/motion/prepare_xwbc.py`、`src/unilab/rl/algos/anybody/`、`src/unilab/conf/appo/task/anybody_g1/mujoco.yaml`、`tests/rl/test_anybody_actor.py`、`tests/data/test_human_motion.py`、`tests/data/test_tracking_export.py`、`tests/data/test_robot_motion.py`、`tests/scripts/test_prepare_xwbc.py`、`tests/models/test_anybody_observations.py`。
 
 ## Related Documents
 
