@@ -128,3 +128,5 @@ APPO_HARDWARE_TIMING_ANALYSIS.md
 /datasets/amass/raw/
 /datasets/amass/archives/
 /datasets/amass/.cache/
+/datasets/amass/g1/
+/datasets/amass/body_models/

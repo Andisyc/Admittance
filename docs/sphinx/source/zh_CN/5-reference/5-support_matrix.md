@@ -99,6 +99,7 @@ uv run scripts/generate_support_matrix.py --write
 | APPO (torch) | `g1_wall_flip_tracking` (G1 wall flip tracking) | Tested | - | Tested | - | - | - | - |
 | APPO (torch) | `allegro_inhand` (Allegro in-hand) | Tested | - | Tested | - | - | - | - |
 | APPO (torch) | `sharpa_inhand` (Sharpa in-hand) | Tested | - | Tested | - | - | - | - |
+| APPO (torch) | `anybody_g1` (anybody g1) | Configured | - | Registered | - | - | - | - |
 | APPO (torch) | `g1_23dof_climb_tracking` (g1 23dof climb tracking) | Tested | - | Tested | - | - | - | - |
 | APPO (torch) | `g1_23dof_flip_tracking` (g1 23dof flip tracking) | Tested | - | Tested | - | - | - | - |
 | APPO (torch) | `g1_23dof_motion_tracking` (g1 23dof motion tracking) | Tested | - | Tested | - | - | - | - |
